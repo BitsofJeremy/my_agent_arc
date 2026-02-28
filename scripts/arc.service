@@ -1,0 +1,47 @@
+# ============================================================================
+# ARC Agent Framework — systemd unit file
+#
+# Install:
+#   sudo cp scripts/arc.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable arc
+#   sudo systemctl start arc
+#
+# Logs:
+#   sudo journalctl -u arc -f
+# ============================================================================
+
+[Unit]
+Description=ARC — Autonomous AI Agent Framework
+Documentation=https://github.com/BitsofJeremy/my_agent_arc
+After=network-online.target ollama.service
+Wants=network-online.target ollama.service
+
+[Service]
+Type=simple
+User=arc
+Group=arc
+WorkingDirectory=/opt/arc
+ExecStart=/opt/arc/.venv/bin/python -m arc.main
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+EnvironmentFile=/opt/arc/.env
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/arc/data
+PrivateTmp=true
+
+# Resource limits
+LimitNOFILE=65536
+TimeoutStartSec=30
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

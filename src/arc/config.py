@@ -45,7 +45,7 @@ class Settings:
 
     telegram_bot_token: str = ""
     ollama_host: str = "http://localhost:11434"
-    ollama_model: str = "llama3.1:8b"
+    ollama_model: str = "minimax-m2.5"
     ollama_embed_model: str = "nomic-embed-text"
     sqlite_db_path: str = "data/arc.db"
     chromadb_path: str = "data/chromadb"
