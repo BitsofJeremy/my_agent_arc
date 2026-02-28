@@ -1,3 +1,8 @@
 {
-  "servers": {}
+  "servers": {
+    "test": {
+      "command": "python",
+      "args": ["tools/test_server.py"]
+    }
+  }
 }
