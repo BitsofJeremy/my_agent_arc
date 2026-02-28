@@ -209,3 +209,4 @@ __marimo__/
 # Project data (runtime-generated)
 data/arc.db*
 data/chromadb/
+.DS_Store

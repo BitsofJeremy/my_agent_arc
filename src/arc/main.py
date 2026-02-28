@@ -23,6 +23,7 @@ from arc.admin import create_admin_app
 from arc.config import get_settings
 from arc.database import init_db
 from arc.gateway import create_telegram_app, heartbeat_trigger
+from arc.mcp_client import init_mcp_manager
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -46,6 +47,11 @@ async def start() -> None:
 
     # -- Database -----------------------------------------------------------
     await init_db()
+
+    # -- MCP servers -------------------------------------------------------
+    mcp_manager = await init_mcp_manager()
+    if mcp_manager and mcp_manager.server_count > 0:
+        logger.info("MCP: %d server(s) connected", mcp_manager.server_count)
 
     # -- Telegram bot (optional) --------------------------------------------
     telegram_app = None
@@ -94,6 +100,10 @@ async def start() -> None:
     finally:
         # -- Graceful shutdown (runs even on SIGINT / SIGTERM) --------------
         logger.info("Shutting down ARC …")
+
+        if mcp_manager:
+            await mcp_manager.shutdown()
+            logger.info("MCP servers stopped")
 
         scheduler.shutdown(wait=False)
         logger.info("Scheduler stopped")

@@ -11,7 +11,7 @@ import asyncio
 import logging
 import os
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
@@ -21,6 +21,7 @@ from arc.config import PROJECT_ROOT, get_settings
 from arc.context_manager import maybe_compact
 from arc.database import get_db
 from arc.gateway import cron_trigger, heartbeat_trigger
+from arc.mcp_client import get_mcp_manager
 
 logger = logging.getLogger(__name__)
 
@@ -159,12 +160,24 @@ def _register_routes(app: FastAPI) -> None:  # noqa: C901 — route registration
             )
             recent_messages = [dict(r) for r in await cursor.fetchall()]
 
+        # MCP server info
+        mcp_info: list[dict[str, Any]] = []
+        manager = get_mcp_manager()
+        if manager is not None:
+            for name, conn in manager.servers.items():
+                mcp_info.append({
+                    "name": name,
+                    "tool_count": len(conn.tools),
+                    "tools": [t["function"]["name"] for t in conn.tools],
+                })
+
         return _render(
             "dashboard.html",
             db_size_bytes=db_size_bytes,
             message_count=message_count,
             compacted_count=compacted_count,
             recent_messages=recent_messages,
+            mcp_servers=mcp_info,
         )
 
     # -- Live logs page -----------------------------------------------------

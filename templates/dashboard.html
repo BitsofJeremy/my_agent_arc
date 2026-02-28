@@ -42,6 +42,31 @@
   </form>
 </div>
 
+{# ----- MCP Servers ----- #}
+<div class="card">
+  <h2>🔌 MCP Servers</h2>
+  {% if mcp_servers %}
+  <table>
+    <thead>
+      <tr>
+        <th>Server</th>
+        <th>Tools</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for server in mcp_servers %}
+      <tr>
+        <td><strong>{{ server.name }}</strong></td>
+        <td>{{ server.tools | join(", ") }} ({{ server.tool_count }})</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color: var(--muted);">No MCP servers configured. Edit <code>data/mcp_servers.json</code> to add servers.</p>
+  {% endif %}
+</div>
+
 {# ----- Recent messages ----- #}
 <div class="card">
   <h2>Recent Messages</h2>

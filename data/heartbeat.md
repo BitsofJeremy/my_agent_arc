@@ -21,9 +21,7 @@ Every few minutes, the scheduler rouses you and presents this file. You determin
 - Your human is clearly occupied with other matters
 
 ## Current Instructions
-
-- No active instructions. Awaiting interaction.
-
+Remember Jeremy lives in Mountain timezone outside Boulder Colorado, birthday April 4th. Consider his local context when scheduling or discussing time-sensitive matters.
 ## Standing Permissions (No Confirmation Required)
 
 - Review and organise memory

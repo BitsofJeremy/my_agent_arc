@@ -89,8 +89,21 @@ _TOOL_SCHEMAS: list[dict[str, Any]] = [
 
 
 def get_tool_schemas() -> list[dict[str, Any]]:
-    """Return Ollama-compatible tool schemas for injection into chat calls."""
-    return _TOOL_SCHEMAS
+    """Return Ollama-compatible tool schemas for injection into chat calls.
+
+    Merges built-in schemas with any MCP server tools.  Built-in tools take
+    priority when names conflict.
+    """
+    from arc.mcp_client import get_mcp_manager
+
+    schemas = list(_TOOL_SCHEMAS)
+    manager = get_mcp_manager()
+    if manager is not None:
+        builtin_names = {s["function"]["name"] for s in _TOOL_SCHEMAS}
+        for schema in manager.get_tool_schemas():
+            if schema["function"]["name"] not in builtin_names:
+                schemas.append(schema)
+    return schemas
 
 
 # ---------------------------------------------------------------------------
@@ -200,6 +213,20 @@ async def execute_tool(tool_name: str, arguments: dict[str, Any]) -> str:
     handler = TOOL_REGISTRY.get(tool_name)
 
     if handler is None:
+        # Fall back to MCP servers for non-built-in tools.
+        from arc.mcp_client import get_mcp_manager
+
+        manager = get_mcp_manager()
+        if manager is not None and manager.has_tool(tool_name):
+            try:
+                result = await manager.call_tool(tool_name, arguments)
+                logger.debug("MCP tool %s returned: %s", tool_name, result[:200])
+                return result
+            except Exception as exc:
+                msg = f"Error executing MCP tool {tool_name}: {exc}"
+                logger.exception(msg)
+                return msg
+
         available = ", ".join(sorted(TOOL_REGISTRY))
         msg = f"Error: Unknown tool '{tool_name}'. Available tools: {available}"
         logger.warning(msg)

@@ -12,3 +12,4 @@ apscheduler>=3.10.0
 python-dotenv>=1.0.0
 aiosqlite>=0.20.0
 python-multipart>=0.0.9
+mcp[cli]>=1.0.0
