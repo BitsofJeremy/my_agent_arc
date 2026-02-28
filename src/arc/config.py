@@ -1,4 +1,4 @@
-"""OpenClaw configuration — loads settings from environment variables and .env file."""
+"""ARC configuration — loads settings from environment variables and .env file."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import get_type_hints
 from dotenv import load_dotenv
 
 # Project root is three levels up from this file:
-#   src/openclaw/config.py  →  src/openclaw  →  src  →  project root
+#   src/arc/config.py  →  src/arc  →  src  →  project root
 PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent
 
 # Load .env from the project root (no-op when file is absent).
@@ -28,10 +28,10 @@ def _resolve_path(raw: str) -> str:
 
 # ---------------------------------------------------------------------------
 # Mapping from dataclass field name → environment variable name.
-# Convention: upper-case the field name and prefix with ``OPENCLAW_``.
+# Convention: upper-case the field name and prefix with ``ARC_``.
 # ---------------------------------------------------------------------------
 
-_ENV_PREFIX = "OPENCLAW_"
+_ENV_PREFIX = "ARC_"
 
 # Fields whose resolved values are filesystem paths.
 _PATH_FIELDS: frozenset[str] = frozenset(
@@ -47,7 +47,7 @@ class Settings:
     ollama_host: str = "http://localhost:11434"
     ollama_model: str = "llama3.1:8b"
     ollama_embed_model: str = "nomic-embed-text"
-    sqlite_db_path: str = "data/openclaw.db"
+    sqlite_db_path: str = "data/arc.db"
     chromadb_path: str = "data/chromadb"
     context_window_tokens: int = 8192
     compaction_threshold: float = 0.5
@@ -62,7 +62,7 @@ class Settings:
 def load_settings() -> Settings:
     """Build a :class:`Settings` instance from environment variables.
 
-    Each field is read from ``OPENCLAW_<FIELD_NAME>`` (upper-cased).  If the
+    Each field is read from ``ARC_<FIELD_NAME>`` (upper-cased).  If the
     variable is unset the dataclass default is used.  Values are coerced to the
     declared type (``int``, ``float``, ``str``).  Path fields are resolved
     relative to the project root.

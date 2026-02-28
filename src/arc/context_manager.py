@@ -1,4 +1,4 @@
-"""Context management and compaction for the OpenClaw agent framework.
+"""Context management and compaction for the ARC agent framework.
 
 Handles conversation history logging, token-aware context compaction via Ollama
 summarisation, and assembly of the final prompt context (soul + compacted
@@ -12,11 +12,11 @@ from pathlib import Path
 
 import ollama
 
-from openclaw.config import get_settings
-from openclaw.database import get_db
-from openclaw.memory import save_to_memory
+from arc.config import get_settings
+from arc.database import get_db
+from arc.memory import save_to_memory
 
-logger = logging.getLogger("openclaw.context_manager")
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------

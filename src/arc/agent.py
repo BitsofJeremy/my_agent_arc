@@ -1,4 +1,4 @@
-"""Core agentic loop for the OpenClaw agent framework.
+"""Core agentic loop for the ARC agent framework.
 
 Orchestrates multi-turn conversations with tool use by iteratively calling
 Ollama, dispatching tool calls, and feeding results back into the context
@@ -14,11 +14,11 @@ from typing import Any
 
 import ollama
 
-from openclaw.config import get_settings
-from openclaw.context_manager import build_context, log_message, maybe_compact
-from openclaw.tools import execute_tool, get_tool_schemas
+from arc.config import get_settings
+from arc.context_manager import build_context, log_message, maybe_compact
+from arc.tools import execute_tool, get_tool_schemas
 
-logger = logging.getLogger("openclaw.agent")
+logger = logging.getLogger(__name__)
 
 # Fallback returned when the iteration budget is exhausted.
 _MAX_ITERATIONS_REPLY = (

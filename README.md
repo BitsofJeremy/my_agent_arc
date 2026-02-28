@@ -1,8 +1,8 @@
-# OpenClaw — Autonomous AI Agent Framework
+# ARC — Autonomous AI Agent Framework
 
 A modular, self-contained autonomous AI agent built on four architectural zones:
 **Triggers**, **Context Injection**, **Agentic Loop**, and **Outputs/Memory**.
-OpenClaw uses [Ollama](https://ollama.com/) for local LLM inference,
+ARC uses [Ollama](https://ollama.com/) for local LLM inference,
 [Telegram](https://core.telegram.org/bots) as its primary conversational
 interface, SQLite + ChromaDB for hybrid relational/vector storage, and a
 FastAPI admin dashboard for monitoring and control.
@@ -77,7 +77,7 @@ FastAPI admin dashboard for monitoring and control.
 ```
 my_agent_arc/
 ├── src/
-│   └── openclaw/
+│   └── arc/
 │       ├── __init__.py
 │       ├── config.py            # Settings from env vars (.env)
 │       ├── database.py          # SQLite schema + ChromaDB init
@@ -140,7 +140,7 @@ pip install -r requirements.txt
 ### 5. Run the agent
 
 ```bash
-python -m openclaw.main
+python -m arc.main
 ```
 
 The agent will start three concurrent subsystems:
@@ -161,7 +161,7 @@ All settings are loaded from environment variables (or `.env` file).
 | `OLLAMA_HOST`                | `http://localhost:11434`   | Ollama server URL                                  |
 | `OLLAMA_MODEL`               | `llama3.1:8b`              | Chat model for the agentic loop                    |
 | `OLLAMA_EMBED_MODEL`         | `nomic-embed-text`         | Embedding model for ChromaDB memory                |
-| `SQLITE_DB_PATH`             | `data/openclaw.db`         | Path to SQLite database file                       |
+| `SQLITE_DB_PATH`             | `data/arc.db`              | Path to SQLite database file                       |
 | `CHROMADB_PATH`              | `data/chromadb`            | Path to ChromaDB persistent storage                |
 | `CONTEXT_WINDOW_TOKENS`      | `8192`                     | Max tokens for the assembled context window        |
 | `COMPACTION_THRESHOLD`       | `0.5`                      | Fraction of context window that triggers compaction |

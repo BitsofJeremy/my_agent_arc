@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.backends._legacy:_Backend"
 
 [project]
-name = "openclaw"
+name = "arc"
 version = "0.1.0"
-description = "A single-purpose autonomous AI agent framework"
+description = "ARC — a single-purpose autonomous AI agent framework"
 requires-python = ">=3.11"
 dependencies = [
     "python-telegram-bot>=21.0",
@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-openclaw = "openclaw.main:main"
+arc = "arc.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

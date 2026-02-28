@@ -1,4 +1,4 @@
-"""Tool registry, schemas, and implementations for the OpenClaw agent framework.
+"""Tool registry, schemas, and implementations for the ARC agent framework.
 
 Provides Ollama-compatible tool schemas and async implementations for each
 tool the agent can call.  A central dispatcher (:func:`execute_tool`) routes
@@ -20,10 +20,10 @@ from collections.abc import Callable, Coroutine
 from pathlib import Path
 from typing import Any
 
-from openclaw import memory
-from openclaw.config import get_settings
+from arc import memory
+from arc.config import get_settings
 
-logger = logging.getLogger("openclaw.tools")
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Ollama-compatible tool schemas
@@ -100,7 +100,7 @@ def get_tool_schemas() -> list[dict[str, Any]]:
 async def tool_search_memory(query: str) -> str:
     """Search long-term memory and return formatted results.
 
-    Delegates to :func:`openclaw.memory.search_memory`.  Returns a
+    Delegates to :func:`arc.memory.search_memory`.  Returns a
     human-readable summary of matching memories or a *"No relevant memories
     found."* sentinel when the result set is empty.
     """
@@ -117,7 +117,7 @@ async def tool_search_memory(query: str) -> str:
 async def tool_save_to_memory(fact: str) -> str:
     """Persist an important fact to long-term memory.
 
-    Delegates to :func:`openclaw.memory.save_to_memory` and returns a
+    Delegates to :func:`arc.memory.save_to_memory` and returns a
     confirmation string.
     """
     logger.debug("save_to_memory called with fact=%r", fact)

@@ -1,4 +1,4 @@
-# OpenClaw-Inspired Autonomous Agent Framework — Implementation Plan
+# ARC — Autonomous Agent Framework — Implementation Plan
 
 ## Problem Statement
 Build a modular, single-purpose autonomous AI agent framework with four architectural zones: **Triggers**, **Context Injection**, **Agentic Loop (LLM + Tools)**, and **Outputs/Memory**. The agent uses Ollama for local LLM inference, Telegram as primary interface, SQLite for relational storage, ChromaDB for vector memory/RAG, FastAPI for admin, and APScheduler for scheduling.
@@ -12,7 +12,7 @@ my_agent_arc/
 ├── docs/
 │   └── PLAN.md                # This plan
 ├── src/
-│   └── openclaw/
+│   └── arc/
 │       ├── __init__.py
 │       ├── config.py          # Settings, env vars, constants
 │       ├── database.py        # SQLite schema + ChromaDB init

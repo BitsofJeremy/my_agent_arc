@@ -1,4 +1,4 @@
-# OpenClaw Agent Framework
+# ARC Agent Framework
 
 ## Requirements
 

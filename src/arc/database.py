@@ -1,4 +1,4 @@
-"""Database initialization for OpenClaw — SQLite (async) and ChromaDB (persistent).
+"""Database initialization for ARC — SQLite (async) and ChromaDB (persistent).
 
 Provides:
     - ``init_db``          – create SQLite tables (WAL mode, idempotent).
@@ -6,7 +6,7 @@ Provides:
     - ``get_chroma_client`` – return a persistent ChromaDB client.
     - ``get_memory_collection`` – return (or create) the ``agent_memory`` collection.
 
-Both database paths are read from ``openclaw.config.get_settings()``.
+Both database paths are read from ``arc.config.get_settings()``.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from typing import AsyncIterator
 import aiosqlite
 import chromadb
 
-from openclaw.config import get_settings
+from arc.config import get_settings
 
 logger = logging.getLogger(__name__)
 

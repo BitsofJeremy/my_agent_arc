@@ -1,4 +1,4 @@
-"""OpenClaw admin dashboard — FastAPI + Jinja2 web interface.
+"""ARC admin dashboard — FastAPI + Jinja2 web interface.
 
 Provides a lightweight admin panel for monitoring the agent: viewing database
 stats, browsing recent messages, live-streaming logs, editing soul/heartbeat
@@ -17,12 +17,12 @@ from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from jinja2 import Environment, FileSystemLoader
 
-from openclaw.config import PROJECT_ROOT, get_settings
-from openclaw.context_manager import maybe_compact
-from openclaw.database import get_db
-from openclaw.gateway import cron_trigger, heartbeat_trigger
+from arc.config import PROJECT_ROOT, get_settings
+from arc.context_manager import maybe_compact
+from arc.database import get_db
+from arc.gateway import cron_trigger, heartbeat_trigger
 
-logger = logging.getLogger("openclaw.admin")
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Template setup
@@ -70,12 +70,12 @@ class _SSELogHandler(logging.Handler):
 
 
 def _install_sse_handler() -> None:
-    """Attach the SSE log handler to the root ``openclaw`` logger."""
+    """Attach the SSE log handler to the root ``arc`` logger."""
     handler = _SSELogHandler()
     handler.setFormatter(
         logging.Formatter("%(asctime)s  %(levelname)-8s  %(name)s — %(message)s")
     )
-    root_logger = logging.getLogger("openclaw")
+    root_logger = logging.getLogger("arc")
     # Avoid duplicate handlers on repeated calls.
     if not any(isinstance(h, _SSELogHandler) for h in root_logger.handlers):
         root_logger.addHandler(handler)
@@ -249,8 +249,8 @@ def _register_routes(app: FastAPI) -> None:  # noqa: C901 — route registration
 
 
 def create_admin_app() -> FastAPI:
-    """Create and return the OpenClaw admin :class:`FastAPI` application."""
-    app = FastAPI(title="OpenClaw Admin", version="0.1.0")
+    """Create and return the ARC admin :class:`FastAPI` application."""
+    app = FastAPI(title="ARC Admin", version="0.1.0")
     _install_sse_handler()
     _register_routes(app)
     logger.info("Admin dashboard app created")

@@ -18,8 +18,8 @@ from typing import Any
 
 import ollama
 
-from openclaw.config import get_settings
-from openclaw.database import get_memory_collection
+from arc.config import get_settings
+from arc.database import get_memory_collection
 
 logger = logging.getLogger(__name__)
 

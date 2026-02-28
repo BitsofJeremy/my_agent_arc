@@ -1,4 +1,4 @@
-"""Gateway and trigger handlers for the OpenClaw agent framework.
+"""Gateway and trigger handlers for the ARC agent framework.
 
 Provides the inbound integration points that feed messages into the agent:
 
@@ -20,10 +20,10 @@ from pathlib import Path
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
-from openclaw import agent
-from openclaw.config import get_settings
+from arc import agent
+from arc.config import get_settings
 
-logger = logging.getLogger("openclaw.gateway")
+logger = logging.getLogger(__name__)
 
 # Default placeholder text that ships with a fresh ``heartbeat.md``.
 # When the file contains only this (or is empty) the heartbeat is a no-op.
@@ -42,7 +42,7 @@ async def handle_trigger(
 ) -> str:
     """Single entry-point for every inbound trigger.
 
-    Logs the trigger, delegates to :func:`openclaw.agent.run_agent`, and
+    Logs the trigger, delegates to :func:`arc.agent.run_agent`, and
     returns the agent's response.
 
     Parameters
@@ -124,7 +124,7 @@ async def telegram_message_handler(
 def create_telegram_app() -> Application:  # type: ignore[type-arg]
     """Build and return a configured ``python-telegram-bot`` Application.
 
-    Reads the bot token from :func:`openclaw.config.get_settings` and
+    Reads the bot token from :func:`arc.config.get_settings` and
     registers a :class:`MessageHandler` for all text messages.
 
     Returns
@@ -138,7 +138,7 @@ def create_telegram_app() -> Application:  # type: ignore[type-arg]
     if not settings.telegram_bot_token:
         raise RuntimeError(
             "Telegram bot token is not configured. "
-            "Set OPENCLAW_TELEGRAM_BOT_TOKEN in your environment or .env file."
+            "Set ARC_TELEGRAM_BOT_TOKEN in your environment or .env file."
         )
 
     app: Application = (  # type: ignore[type-arg]

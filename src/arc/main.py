@@ -1,4 +1,4 @@
-"""OpenClaw entry point — wires together the Telegram bot, admin dashboard, and scheduler.
+"""ARC entry point — wires together the Telegram bot, admin dashboard, and scheduler.
 
 Starts three subsystems concurrently:
 
@@ -19,10 +19,10 @@ import signal
 import uvicorn
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from openclaw.admin import create_admin_app
-from openclaw.config import get_settings
-from openclaw.database import init_db
-from openclaw.gateway import create_telegram_app, heartbeat_trigger
+from arc.admin import create_admin_app
+from arc.config import get_settings
+from arc.database import init_db
+from arc.gateway import create_telegram_app, heartbeat_trigger
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -32,7 +32,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
 )
-logger = logging.getLogger("openclaw.main")
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Async entry point
@@ -42,7 +42,7 @@ logger = logging.getLogger("openclaw.main")
 async def start() -> None:
     """Initialise all subsystems and run until interrupted."""
     settings = get_settings()
-    logger.info("OpenClaw starting — admin on %s:%s", settings.admin_host, settings.admin_port)
+    logger.info("ARC starting — admin on %s:%s", settings.admin_host, settings.admin_port)
 
     # -- Database -----------------------------------------------------------
     await init_db()
@@ -88,7 +88,7 @@ async def start() -> None:
         await server.serve()
     finally:
         # -- Graceful shutdown (runs even on SIGINT / SIGTERM) --------------
-        logger.info("Shutting down OpenClaw …")
+        logger.info("Shutting down ARC …")
 
         scheduler.shutdown(wait=False)
         logger.info("Scheduler stopped")
@@ -99,7 +99,7 @@ async def start() -> None:
         await telegram_app.shutdown()
         logger.info("Telegram bot stopped")
 
-        logger.info("OpenClaw shutdown complete")
+        logger.info("ARC shutdown complete")
 
 
 # ---------------------------------------------------------------------------
