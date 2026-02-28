@@ -190,9 +190,26 @@ class MCPManager:
     async def shutdown(self) -> None:
         """Close all MCP server connections."""
         logger.info("MCP: shutting down %d server(s)", len(self._servers))
-        await self._exit_stack.aclose()
+        try:
+            await self._exit_stack.aclose()
+        except RuntimeError:
+            # anyio cancel scope issues during shutdown — log and continue.
+            logger.warning("MCP: non-fatal error during shutdown (cancel scope)")
         self._servers.clear()
         self._tool_map.clear()
+
+    # -- Server info --------------------------------------------------------
+
+    def get_server_info(self) -> list[dict[str, Any]]:
+        """Return a summary of connected servers and their tools."""
+        info: list[dict[str, Any]] = []
+        for name, conn in self._servers.items():
+            info.append({
+                "name": name,
+                "tool_count": len(conn.tools),
+                "tools": [t["function"]["name"] for t in conn.tools],
+            })
+        return info
 
     # -- Config loading -----------------------------------------------------
 
@@ -230,6 +247,29 @@ async def init_mcp_manager() -> MCPManager | None:
     await _manager.connect_all()
     if _manager.server_count == 0:
         logger.info("MCP: no servers connected — MCP tools disabled")
+    return _manager
+
+
+async def reload_mcp_manager() -> MCPManager | None:
+    """Replace the global :class:`MCPManager` with a fresh instance.
+
+    Creates a new manager, connects to all configured servers, and replaces
+    the module-level singleton.  The old manager's subprocesses are left to
+    be cleaned up by the OS (avoids anyio cancel-scope issues with
+    in-process shutdown during a reload).
+    """
+    global _manager  # noqa: PLW0603
+    logger.info("MCP: reloading — creating fresh manager")
+    old = _manager
+    new = MCPManager()
+    await new.connect_all()
+    _manager = new
+    # Best-effort shutdown of old manager.
+    if old is not None:
+        try:
+            await old.shutdown()
+        except Exception:
+            logger.debug("MCP: old manager cleanup failed (non-fatal)")
     return _manager
 
 

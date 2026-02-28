@@ -10,11 +10,15 @@ Tools
 - **save_to_memory** — persist an important fact to long-term memory.
 - **write_heartbeat** — rewrite the *Current Instructions* section of
   ``heartbeat.md`` so the agent can program its own future behavior.
+- **write_skill** — create a new MCP tool server and hot-reload.
+- **list_skills** — list all connected MCP servers and their tools.
+- **remove_skill** — remove an ARC-generated skill server.
 """
 
 from __future__ import annotations
 
 import inspect
+import json
 import logging
 import re
 from collections.abc import Callable, Coroutine
@@ -22,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from arc import memory
-from arc.config import get_settings
+from arc.config import PROJECT_ROOT, get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +86,69 @@ _TOOL_SCHEMAS: list[dict[str, Any]] = [
                     },
                 },
                 "required": ["instructions"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "write_skill",
+            "description": (
+                "Create a new skill by generating an MCP tool server. "
+                "The code parameter must be a complete Python script that defines "
+                "MCP tools using the @server.list_tools() and @server.call_tool() "
+                "decorators. The server boilerplate is added automatically."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Skill name (alphanumeric and underscores only, e.g. 'weather')",
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Brief description of what this skill does",
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": (
+                            "Python code defining MCP tools. Must include "
+                            "@server.list_tools() and @server.call_tool() decorated functions. "
+                            "Import 'server' from the template — it is pre-defined. "
+                            "Use TextContent and Tool from mcp.types."
+                        ),
+                    },
+                },
+                "required": ["name", "description", "code"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_skills",
+            "description": "List all connected MCP skill servers and their available tools.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remove_skill",
+            "description": "Remove an ARC-generated skill server and its tools.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the skill server to remove",
+                    },
+                },
+                "required": ["name"],
             },
         },
     },
@@ -181,6 +248,165 @@ async def tool_write_heartbeat(instructions: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Skill self-authoring tools
+# ---------------------------------------------------------------------------
+
+_ARC_GENERATED_MARKER = "# ARC-generated skill server"
+_TOOLS_DIR = PROJECT_ROOT / "tools"
+_MCP_CONFIG_PATH = PROJECT_ROOT / "data" / "mcp_servers.json"
+
+_SKILL_TEMPLATE = '''\
+#!/usr/bin/env python3
+{marker}: {name}
+# {description}
+
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import TextContent, Tool
+import asyncio
+
+server = Server("{name}")
+
+{code}
+
+async def main() -> None:
+    async with stdio_server() as (read, write):
+        await server.run(read, write, server.create_initialization_options())
+
+if __name__ == "__main__":
+    asyncio.run(main())
+'''
+
+
+def _validate_skill_name(name: str) -> str | None:
+    """Return an error message if *name* is invalid, else ``None``."""
+    if not name:
+        return "Skill name cannot be empty."
+    if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", name):
+        return (
+            f"Invalid skill name '{name}'. "
+            "Must start with a letter and contain only letters, digits, and underscores."
+        )
+    return None
+
+
+def _read_mcp_config() -> dict[str, Any]:
+    """Read ``data/mcp_servers.json``."""
+    if not _MCP_CONFIG_PATH.exists():
+        return {"servers": {}}
+    with open(_MCP_CONFIG_PATH, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _write_mcp_config(config: dict[str, Any]) -> None:
+    """Write ``data/mcp_servers.json``."""
+    with open(_MCP_CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=2)
+        f.write("\n")
+
+
+async def tool_write_skill(name: str, description: str, code: str) -> str:
+    """Generate an MCP skill server file and hot-reload the MCP manager."""
+    from arc.mcp_client import get_mcp_manager, reload_mcp_manager
+
+    # Validate name.
+    err = _validate_skill_name(name)
+    if err:
+        return f"Error: {err}"
+
+    # Check for conflicts with built-in tools.
+    builtin_names = {s["function"]["name"] for s in _TOOL_SCHEMAS}
+    if name in builtin_names:
+        return f"Error: '{name}' conflicts with a built-in tool name."
+
+    # Generate the server file.
+    _TOOLS_DIR.mkdir(parents=True, exist_ok=True)
+    server_file = _TOOLS_DIR / f"{name}_server.py"
+
+    source = _SKILL_TEMPLATE.format(
+        marker=_ARC_GENERATED_MARKER,
+        name=name,
+        description=description,
+        code=code,
+    )
+    server_file.write_text(source, encoding="utf-8")
+    logger.info("Wrote skill server to %s", server_file)
+
+    # Update mcp_servers.json.
+    config = _read_mcp_config()
+    config.setdefault("servers", {})[name] = {
+        "command": "python",
+        "args": [f"tools/{name}_server.py"],
+    }
+    _write_mcp_config(config)
+    logger.info("Updated mcp_servers.json with skill '%s'", name)
+
+    # Hot-reload MCP connections.
+    manager = await reload_mcp_manager()
+    if manager is not None:
+        info = manager.get_server_info()
+        for server_info in info:
+            if server_info["name"] == name:
+                tools_list = ", ".join(server_info["tools"])
+                return (
+                    f"Skill '{name}' created and loaded successfully. "
+                    f"Available tools: {tools_list}"
+                )
+
+    return f"Skill '{name}' created. Restart ARC to activate it."
+
+
+async def tool_list_skills() -> str:
+    """List all connected MCP skill servers and their tools."""
+    from arc.mcp_client import get_mcp_manager
+
+    manager = get_mcp_manager()
+    if manager is None or manager.server_count == 0:
+        return "No MCP skill servers connected."
+
+    info = manager.get_server_info()
+    lines: list[str] = []
+    for server in info:
+        tools_str = ", ".join(server["tools"]) or "(no tools)"
+        lines.append(f"- **{server['name']}**: {tools_str} ({server['tool_count']} tools)")
+
+    return "Connected skill servers:\n" + "\n".join(lines)
+
+
+async def tool_remove_skill(name: str) -> str:
+    """Remove an ARC-generated skill server."""
+    from arc.mcp_client import reload_mcp_manager
+
+    err = _validate_skill_name(name)
+    if err:
+        return f"Error: {err}"
+
+    server_file = _TOOLS_DIR / f"{name}_server.py"
+
+    # Safety check: only remove ARC-generated files.
+    if server_file.exists():
+        content = server_file.read_text(encoding="utf-8")
+        if _ARC_GENERATED_MARKER not in content:
+            return f"Error: '{name}' was not generated by ARC — refusing to delete."
+        server_file.unlink()
+        logger.info("Deleted skill server %s", server_file)
+    else:
+        logger.warning("Skill file %s not found — removing from config only", server_file)
+
+    # Remove from mcp_servers.json.
+    config = _read_mcp_config()
+    if name in config.get("servers", {}):
+        del config["servers"][name]
+        _write_mcp_config(config)
+        logger.info("Removed '%s' from mcp_servers.json", name)
+
+    # Hot-reload.
+    await reload_mcp_manager()
+
+    return f"Skill '{name}' removed successfully."
+
+
+# ---------------------------------------------------------------------------
 # Tool registry & dispatcher
 # ---------------------------------------------------------------------------
 
@@ -190,6 +416,9 @@ TOOL_REGISTRY: dict[str, Callable[..., Coroutine[Any, Any, str]]] = {
     "search_memory": tool_search_memory,
     "save_to_memory": tool_save_to_memory,
     "write_heartbeat": tool_write_heartbeat,
+    "write_skill": tool_write_skill,
+    "list_skills": tool_list_skills,
+    "remove_skill": tool_remove_skill,
 }
 
 
