@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "arc"
@@ -17,6 +17,7 @@ dependencies = [
     "apscheduler>=3.10.0",
     "python-dotenv>=1.0.0",
     "aiosqlite>=0.20.0",
+    "python-multipart>=0.0.9",
 ]
 
 [project.scripts]

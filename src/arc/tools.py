@@ -14,6 +14,7 @@ Tools
 
 from __future__ import annotations
 
+import inspect
 import logging
 import re
 from collections.abc import Callable, Coroutine
@@ -205,7 +206,13 @@ async def execute_tool(tool_name: str, arguments: dict[str, Any]) -> str:
         return msg
 
     try:
-        result = await handler(**arguments)
+        # Filter arguments to only those the handler actually accepts,
+        # so hallucinated extra params from the LLM don't crash the call.
+        sig = inspect.signature(handler)
+        accepted = set(sig.parameters.keys())
+        filtered_args = {k: v for k, v in arguments.items() if k in accepted}
+
+        result = await handler(**filtered_args)
     except Exception as exc:
         msg = f"Error executing {tool_name}: {exc}"
         logger.exception(msg)

@@ -47,8 +47,12 @@ async def start() -> None:
     # -- Database -----------------------------------------------------------
     await init_db()
 
-    # -- Telegram bot -------------------------------------------------------
-    telegram_app = create_telegram_app()
+    # -- Telegram bot (optional) --------------------------------------------
+    telegram_app = None
+    if settings.telegram_bot_token:
+        telegram_app = create_telegram_app()
+    else:
+        logger.warning("No TELEGRAM_BOT_TOKEN set — Telegram bot disabled")
 
     # -- FastAPI admin ------------------------------------------------------
     admin_app = create_admin_app()
@@ -68,12 +72,13 @@ async def start() -> None:
     )
 
     # -- Start Telegram polling (non-blocking) ------------------------------
-    await telegram_app.initialize()
-    await telegram_app.start()
-    if telegram_app.updater is None:
-        raise RuntimeError("Telegram application was built without an Updater.")
-    await telegram_app.updater.start_polling()
-    logger.info("Telegram bot polling started")
+    if telegram_app is not None:
+        await telegram_app.initialize()
+        await telegram_app.start()
+        if telegram_app.updater is None:
+            raise RuntimeError("Telegram application was built without an Updater.")
+        await telegram_app.updater.start_polling()
+        logger.info("Telegram bot polling started")
 
     # -- Uvicorn (blocks until server shuts down) ---------------------------
     server_config = uvicorn.Config(
@@ -93,11 +98,12 @@ async def start() -> None:
         scheduler.shutdown(wait=False)
         logger.info("Scheduler stopped")
 
-        if telegram_app.updater is not None:
-            await telegram_app.updater.stop()
-        await telegram_app.stop()
-        await telegram_app.shutdown()
-        logger.info("Telegram bot stopped")
+        if telegram_app is not None:
+            if telegram_app.updater is not None:
+                await telegram_app.updater.stop()
+            await telegram_app.stop()
+            await telegram_app.shutdown()
+            logger.info("Telegram bot stopped")
 
         logger.info("ARC shutdown complete")
 

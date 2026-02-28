@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import AsyncGenerator
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from jinja2 import Environment, FileSystemLoader
 
 from arc.config import PROJECT_ROOT, get_settings
@@ -228,6 +228,45 @@ def _register_routes(app: FastAPI) -> None:  # noqa: C901 — route registration
         logger.info("Manual cron trigger via admin: %s", prompt[:120])
         await cron_trigger(prompt)
         return RedirectResponse(url="/", status_code=303)
+
+    # -- Chat page ----------------------------------------------------------
+
+    _ADMIN_CHAT_SESSION = "admin-chat"
+
+    @app.get("/chat", response_class=HTMLResponse)
+    async def chat_page(request: Request) -> HTMLResponse:
+        """Show the chat interface with conversation history."""
+        async with get_db() as db:
+            cursor = await db.execute(
+                """
+                SELECT role, content, created_at
+                FROM   messages
+                WHERE  session_id = ?
+                ORDER BY created_at ASC
+                """,
+                (_ADMIN_CHAT_SESSION,),
+            )
+            history = [dict(r) for r in await cursor.fetchall()]
+        return _render("chat.html", history=history)
+
+    @app.post("/api/chat")
+    async def chat_api(request: Request) -> JSONResponse:
+        """Process a chat message and return the agent response."""
+        from arc.agent import run_agent
+
+        body = await request.json()
+        user_message = body.get("message", "").strip()
+        if not user_message:
+            return JSONResponse(
+                {"error": "Empty message"}, status_code=400
+            )
+
+        response = await run_agent(
+            user_message,
+            source="admin",
+            session_id=_ADMIN_CHAT_SESSION,
+        )
+        return JSONResponse({"response": response})
 
     # -- Trigger: compaction ------------------------------------------------
 
