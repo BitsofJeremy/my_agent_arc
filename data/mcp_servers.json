@@ -2,7 +2,15 @@
   "servers": {
     "test": {
       "command": "python",
-      "args": ["tools/test_server.py"]
+      "args": [
+        "tools/test_server.py"
+      ]
+    },
+    "dice": {
+      "command": "python",
+      "args": [
+        "tools/dice_server.py"
+      ]
     }
   }
 }

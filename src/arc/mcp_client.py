@@ -91,7 +91,17 @@ class MCPManager:
                 logger.exception("MCP: failed to connect server %r — skipping", name)
 
     async def _connect_server(self, name: str, entry: dict[str, Any]) -> None:
-        """Launch and initialise a single MCP server."""
+        """Launch and initialise a single MCP server.
+
+        Contexts are opened manually (not via ``enter_async_context``) so that
+        on failure they can be closed immediately from the **same** asyncio task
+        that opened them.  If we let a failed ``stdio_client`` stay registered
+        in the exit stack, its internal anyio task group keeps running; when its
+        background reader/writer tasks later detect the subprocess died they
+        attempt to cancel an anyio cancel scope from a *different* task, which
+        raises ``RuntimeError`` and propagates a spurious ``CancelledError`` into
+        whatever the host task is currently awaiting (e.g. an Ollama LLM call).
+        """
         command: str = entry["command"]
         args: list[str] = entry.get("args", [])
         env: dict[str, str] | None = entry.get("env")
@@ -100,19 +110,28 @@ class MCPManager:
 
         params = StdioServerParameters(command=command, args=args, env=env)
 
-        # Enter the stdio_client context — stays open until shutdown.
-        read_stream, write_stream = await self._exit_stack.enter_async_context(
-            stdio_client(params)
-        )
+        # Open stdio_client manually so we can close it from this same task on
+        # failure, keeping anyio's cancel-scope bookkeeping correct.
+        stdio_cm = stdio_client(params)
+        read_stream, write_stream = await stdio_cm.__aenter__()
+        try:
+            session_cm = ClientSession(read_stream, write_stream)
+            session: ClientSession = await session_cm.__aenter__()
+            try:
+                await session.initialize()
+                tools_result = await session.list_tools()
+            except Exception:
+                await session_cm.__aexit__(None, None, None)
+                raise
+        except Exception:
+            await stdio_cm.__aexit__(None, None, None)
+            raise
 
-        # Enter the ClientSession context.
-        session: ClientSession = await self._exit_stack.enter_async_context(
-            ClientSession(read_stream, write_stream)
-        )
-        await session.initialize()
+        # Success — register cleanup callbacks with the main exit stack.
+        # push_async_exit() registers in LIFO order: session is closed before stdio.
+        self._exit_stack.push_async_exit(session_cm.__aexit__)
+        self._exit_stack.push_async_exit(stdio_cm.__aexit__)
 
-        # Discover tools.
-        tools_result = await session.list_tools()
         ollama_schemas = [self._convert_schema(tool) for tool in tools_result.tools]
 
         conn = ServerConnection(name=name, session=session, tools=ollama_schemas)
@@ -255,21 +274,16 @@ async def reload_mcp_manager() -> MCPManager | None:
 
     Creates a new manager, connects to all configured servers, and replaces
     the module-level singleton.  The old manager's subprocesses are left to
-    be cleaned up by the OS (avoids anyio cancel-scope issues with
-    in-process shutdown during a reload).
+    be cleaned up by the OS — attempting to close anyio cancel scopes from a
+    different asyncio task (e.g. a Telegram message handler) raises
+    ``CancelledError`` (a ``BaseException`` since Python 3.8) which propagates
+    up and kills the Telegram update-fetcher task.
     """
     global _manager  # noqa: PLW0603
     logger.info("MCP: reloading — creating fresh manager")
-    old = _manager
     new = MCPManager()
     await new.connect_all()
     _manager = new
-    # Best-effort shutdown of old manager.
-    if old is not None:
-        try:
-            await old.shutdown()
-        except Exception:
-            logger.debug("MCP: old manager cleanup failed (non-fatal)")
     return _manager
 
 

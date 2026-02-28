@@ -23,6 +23,7 @@ import logging
 import re
 from collections.abc import Callable, Coroutine
 from pathlib import Path
+from string import Template
 from typing import Any
 
 from arc import memory
@@ -115,8 +116,12 @@ _TOOL_SCHEMAS: list[dict[str, Any]] = [
                         "description": (
                             "Python code defining MCP tools. Must include "
                             "@server.list_tools() and @server.call_tool() decorated functions. "
-                            "Import 'server' from the template — it is pre-defined. "
-                            "Use TextContent and Tool from mcp.types."
+                            "BOTH decorated functions MUST be 'async def' — not plain 'def'. "
+                            "Already available (do NOT import or redefine): "
+                            "server, Server, Tool, TextContent, stdio_server, asyncio. "
+                            "Only include imports for additional libraries your tool needs "
+                            "(e.g. 'import datetime', 'import random'). "
+                            "Do NOT include 'import server' — server is already defined."
                         ),
                     },
                 },
@@ -255,19 +260,19 @@ _ARC_GENERATED_MARKER = "# ARC-generated skill server"
 _TOOLS_DIR = PROJECT_ROOT / "tools"
 _MCP_CONFIG_PATH = PROJECT_ROOT / "data" / "mcp_servers.json"
 
-_SKILL_TEMPLATE = '''\
+_SKILL_TEMPLATE = Template('''\
 #!/usr/bin/env python3
-{marker}: {name}
-# {description}
+$marker: $name
+# $description
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 import asyncio
 
-server = Server("{name}")
+server = Server("$name")
 
-{code}
+$code
 
 async def main() -> None:
     async with stdio_server() as (read, write):
@@ -275,7 +280,7 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-'''
+''')
 
 
 def _validate_skill_name(name: str) -> str | None:
@@ -319,11 +324,26 @@ async def tool_write_skill(name: str, description: str, code: str) -> str:
     if name in builtin_names:
         return f"Error: '{name}' conflicts with a built-in tool name."
 
+    # Strip imports that are already provided by the template boilerplate so
+    # the model can't accidentally shadow or re-import them.
+    _TEMPLATE_PROVIDED = {
+        "from mcp.server import Server",
+        "from mcp.server.stdio import stdio_server",
+        "from mcp.types import TextContent, Tool",
+        "import asyncio",
+        "import server",
+    }
+    cleaned_lines = [
+        line for line in code.splitlines()
+        if line.strip() not in _TEMPLATE_PROVIDED
+    ]
+    code = "\n".join(cleaned_lines)
+
     # Generate the server file.
     _TOOLS_DIR.mkdir(parents=True, exist_ok=True)
     server_file = _TOOLS_DIR / f"{name}_server.py"
 
-    source = _SKILL_TEMPLATE.format(
+    source = _SKILL_TEMPLATE.substitute(
         marker=_ARC_GENERATED_MARKER,
         name=name,
         description=description,
