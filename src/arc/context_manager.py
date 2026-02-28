@@ -324,6 +324,11 @@ async def build_context(
         logger.warning("Soul file not found at %s — using empty system prompt", soul_path)
         soul_text = ""
 
+    # --- Derive optional context file paths from soul directory --------------
+    soul_dir = soul_path.parent
+    identity_path = soul_dir / "identity.md"
+    user_path = soul_dir / "user.md"
+
     # --- Gather compacted summaries -----------------------------------------
     compacted = await get_compacted_context()
 
@@ -331,6 +336,17 @@ async def build_context(
     system_parts: list[str] = []
     if soul_text:
         system_parts.append(soul_text.strip())
+
+    # Load optional identity and user context files
+    for label, path in [("Identity", identity_path), ("User", user_path)]:
+        if path.exists():
+            try:
+                extra = path.read_text(encoding="utf-8").strip()
+                if extra:
+                    system_parts.append(f"\n## {label}\n{extra}")
+            except OSError:
+                pass
+
     if compacted:
         system_parts.append(
             "## Previous Conversation Context\n\n" + compacted.strip()
