@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Live Logs — OpenClaw Admin{% endblock %}
+
+{% block content %}
+<h1>Live Logs</h1>
+
+<div id="log-container"></div>
+
+<script>
+(function () {
+  const container = document.getElementById("log-container");
+  const source = new EventSource("/api/logs/stream");
+
+  source.onmessage = function (event) {
+    const line = document.createElement("div");
+    line.className = "log-line";
+    line.textContent = event.data;
+    container.appendChild(line);
+
+    // Auto-scroll to bottom unless the user has scrolled up.
+    const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+    if (atBottom) {
+      container.scrollTop = container.scrollHeight;
+    }
+  };
+
+  source.onerror = function () {
+    const notice = document.createElement("div");
+    notice.className = "log-line";
+    notice.style.color = "var(--danger)";
+    notice.textContent = "[connection lost — retrying…]";
+    container.appendChild(notice);
+  };
+})();
+</script>
+{% endblock %}

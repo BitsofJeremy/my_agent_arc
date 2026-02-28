@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — OpenClaw Admin{% endblock %}
+
+{% block content %}
+<h1>Dashboard</h1>
+
+{# ----- Stats cards ----- #}
+<div class="stats">
+  <div class="stat">
+    <div class="value">{{ "%.1f KB" | format(db_size_bytes / 1024) }}</div>
+    <div class="label">Database Size</div>
+  </div>
+  <div class="stat">
+    <div class="value">{{ message_count }}</div>
+    <div class="label">Messages</div>
+  </div>
+  <div class="stat">
+    <div class="value">{{ compacted_count }}</div>
+    <div class="label">Compacted Nodes</div>
+  </div>
+</div>
+
+{# ----- Action buttons ----- #}
+<div class="card">
+  <h2>Actions</h2>
+  <div class="actions" style="margin-bottom: 1rem;">
+    <form method="post" action="/trigger/heartbeat" style="display:inline;">
+      <button type="submit" class="btn btn-primary">⏱ Trigger Heartbeat</button>
+    </form>
+    <form method="post" action="/compact" style="display:inline;">
+      <button type="submit" class="btn btn-danger">🗜 Trigger Compaction</button>
+    </form>
+  </div>
+
+  <form method="post" action="/trigger/cron">
+    <label for="cron-prompt">Custom Cron Prompt</label>
+    <div style="display: flex; gap: 0.5rem;">
+      <input type="text" id="cron-prompt" name="prompt" placeholder="Enter a prompt for the agent…" required>
+      <button type="submit" class="btn">Send</button>
+    </div>
+  </form>
+</div>
+
+{# ----- Recent messages ----- #}
+<div class="card">
+  <h2>Recent Messages</h2>
+  {% if recent_messages %}
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Role</th>
+        <th>Content</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for msg in recent_messages %}
+      <tr>
+        <td style="font-family: var(--font-mono); font-size: 0.8rem;">{{ msg.id }}</td>
+        <td class="role">{{ msg.role }}</td>
+        <td class="content" title="{{ msg.content }}">{{ msg.content[:120] }}</td>
+        <td class="timestamp">{{ msg.created_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color: var(--muted);">No messages yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

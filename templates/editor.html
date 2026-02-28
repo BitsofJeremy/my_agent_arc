@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ filename }}.md — OpenClaw Admin{% endblock %}
+
+{% block content %}
+<h1>{{ filename }}.md</h1>
+
+<form method="post" action="/editor/{{ filename }}">
+  <div class="card">
+    <textarea name="content" rows="28" spellcheck="false">{{ content }}</textarea>
+  </div>
+  <div class="actions">
+    <button type="submit" class="btn btn-primary">💾 Save</button>
+    <a href="/" class="btn">Cancel</a>
+  </div>
+</form>
+{% endblock %}
