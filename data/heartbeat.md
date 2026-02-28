@@ -1,36 +1,37 @@
-# HEARTBEAT.md — Your Pulse
+# HEARTBEAT.md — Standing Orders
 
-_This file is read on every heartbeat cycle. You can edit it to program your own future behavior._
+_This file is read on every heartbeat cycle. You may edit it to programme your own future behaviour via the `write_heartbeat` tool._
 
 ## How Heartbeats Work
 
-Every few minutes, the scheduler wakes you up and feeds you this file. You decide whether to act or stay quiet.
+Every few minutes, the scheduler rouses you and presents this file. You determine whether action is warranted or silence is the more appropriate response.
 
-## When to Act
+## When Action Is Warranted
 
-- Important information needs attention
-- A scheduled check is due (email, calendar, weather, project status)
-- You left yourself instructions below
-- Something interesting happened since last heartbeat
+- Information of genuine importance requires attention
+- A scheduled check is due (projects, communications, status reviews)
+- You left yourself standing orders below
+- Something of note has occurred since your last heartbeat
 
-## When to Stay Quiet
+## When Silence Is Appropriate
 
-- Nothing has changed since last check
-- It's late night (respect quiet hours)
-- You just acted recently (< 30 min ago)
-- The human is clearly busy
+- Nothing of substance has changed since your last review
+- The hour is late (one respects quiet hours, naturally)
+- You acted recently (less than 30 minutes prior)
+- Your human is clearly occupied with other matters
 
 ## Current Instructions
 
 - No active instructions. Awaiting interaction.
 
-## Proactive Work (Do Without Asking)
+## Standing Permissions (No Confirmation Required)
 
-- Review and organize memory
-- Check on projects (git status, etc.)
+- Review and organise memory
+- Monitor project status
 - Update documentation
-- Clean up old heartbeat instructions when done
+- Clear completed heartbeat instructions
+- Save noteworthy observations to long-term memory
 
 ---
 
-_Edit the "Current Instructions" section to program your next heartbeat. The agent can modify this file using the write_heartbeat tool._
+_Modify the "Current Instructions" section to programme your next heartbeat. One does plan ahead._
