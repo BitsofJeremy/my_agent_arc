@@ -109,7 +109,22 @@ ollama pull nomic-embed-text      # embedding model for memory
 
 The recommended chat model is [minimax-m2.5](https://ollama.com/library/minimax-m2.5) for its strong tool-calling support and reasoning quality. Any Ollama model with function-calling support will work — set `ARC_OLLAMA_MODEL` in `.env` to use a different one.
 
-### Step 3: Create a virtual environment and install dependencies
+### Step 3: Install uv and project dependencies
+
+[uv](https://docs.astral.sh/uv/) manages dependencies for the MCP tool scripts via PEP 723 inline metadata. Install it first if you don't have it:
+
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# or via Homebrew
+brew install uv
+
+# or via pip
+pip install uv
+```
+
+Then install ARC's own dependencies into a virtual environment:
 
 ```bash
 python3 -m venv .venv
@@ -122,6 +137,8 @@ Alternatively, install in editable mode (useful if you plan to modify ARC):
 ```bash
 pip install -e .
 ```
+
+MCP tool scripts in `tools/` do not need manual installation — `uv run` resolves their dependencies automatically from the inline metadata at first run.
 
 ### Step 4: Configure environment
 
@@ -612,8 +629,8 @@ Each server entry supports:
 {
   "servers": {
     "test": {
-      "command": "python",
-      "args": ["tools/test_server.py"]
+      "command": "uv",
+      "args": ["run", "tools/test_server.py"]
     }
   }
 }
@@ -665,6 +682,12 @@ Create a Python file in `tools/` using the MCP SDK. Here is the pattern from `to
 
 ```python
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "mcp",
+# ]
+# ///
 """My custom MCP tool server."""
 
 from mcp.server import Server
@@ -718,8 +741,8 @@ Add it to `data/mcp_servers.json` and restart ARC:
 {
   "servers": {
     "my-server": {
-      "command": "python",
-      "args": ["tools/my_server.py"]
+      "command": "uv",
+      "args": ["run", "tools/my_server.py"]
     }
   }
 }
@@ -741,10 +764,13 @@ ARC can write its own tools at runtime using the `write_skill` tool. This is one
 
 ### How it works
 
-When ARC calls `write_skill(name, description, code)`:
+When ARC calls `write_skill(name, description, code, dependencies)`:
 
 1. **Validation** — the name is checked (must be alphanumeric + underscores, no conflicts with built-in tools)
 2. **File generation** — a complete MCP server Python file is generated at `tools/<name>_server.py` using a template that adds the server boilerplate, imports, and `asyncio.run(main())` entry point around the provided code
+
+   > The `dependencies` parameter (optional list of pip package names) populates the PEP 723 `# /// script` block so the file can be executed with `uv run` without any pre-installed environment.
+
 3. **Config update** — `data/mcp_servers.json` is updated to include the new server
 4. **Hot-reload** — the MCP manager is reloaded, connecting to the new server and discovering its tools immediately
 5. **Confirmation** — ARC receives confirmation with the list of available tools from the new server
@@ -774,6 +800,13 @@ The generated file at `tools/<name>_server.py` looks like:
 
 ```python
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "mcp",
+#   "pytz",
+# ]
+# ///
 # ARC-generated skill server: timezone
 # Get current time in any timezone
 
@@ -824,8 +857,8 @@ Add the `docker` server entry to `data/mcp_servers.json`:
 {
   "servers": {
     "docker": {
-      "command": "python",
-      "args": ["tools/docker_server.py"],
+      "command": "uv",
+      "args": ["run", "tools/docker_server.py"],
       "env": {
         "DOCKER_HOST": "unix:///Users/jeremy/.docker/run/docker.sock"
       }
@@ -842,8 +875,8 @@ Docker Desktop on macOS places the Unix socket at a user-specific path rather th
 {
   "servers": {
     "docker": {
-      "command": "python",
-      "args": ["tools/docker_server.py"]
+      "command": "uv",
+      "args": ["run", "tools/docker_server.py"]
     }
   }
 }
