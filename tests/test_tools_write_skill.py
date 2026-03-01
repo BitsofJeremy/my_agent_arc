@@ -8,7 +8,7 @@ from arc.tools import _SKILL_TEMPLATE, _ARC_GENERATED_MARKER
 
 
 def run(coro):
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 def test_template_contains_pep723_block():
