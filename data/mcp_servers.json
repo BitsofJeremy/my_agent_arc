@@ -1,20 +1,23 @@
 {
   "servers": {
     "test": {
-      "command": "python",
+      "command": "uv",
       "args": [
+        "run",
         "tools/test_server.py"
       ]
     },
     "dice": {
-      "command": "python",
+      "command": "uv",
       "args": [
+        "run",
         "tools/dice_server.py"
       ]
     },
     "docker": {
-      "command": "python",
+      "command": "uv",
       "args": [
+        "run",
         "tools/docker_server.py"
       ],
       "env": {
@@ -22,8 +25,9 @@
       }
     },
     "get_time": {
-      "command": "python",
+      "command": "uv",
       "args": [
+        "run",
         "tools/get_time_server.py"
       ]
     }
