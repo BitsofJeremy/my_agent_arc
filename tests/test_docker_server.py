@@ -49,27 +49,6 @@ def test_run_in_image_schema_requires_image_and_command():
 
 
 # ---------------------------------------------------------------------------
-# Helper for tests
-# ---------------------------------------------------------------------------
-
-def _make_mock_container(exit_code: int = 0, stdout: bytes = b"hello\n", stderr: bytes = b""):
-    """Build a mock docker container that behaves like the real SDK response."""
-    container = MagicMock()
-    container.wait.return_value = {"StatusCode": exit_code}
-
-    def logs_side_effect(stdout=True, stderr=False):
-        if stdout and not stderr:
-            return b"hello\n"
-        if stderr and not stdout:
-            return b""
-        return b""
-
-    container.logs.side_effect = logs_side_effect
-    container.remove.return_value = None
-    return container
-
-
-# ---------------------------------------------------------------------------
 # _run_container success path tests
 # ---------------------------------------------------------------------------
 

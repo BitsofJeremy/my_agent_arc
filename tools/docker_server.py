@@ -186,10 +186,11 @@ def _run_container(
             image=image,
             command=command,
             volumes=volumes,
-            network_mode="host",
+            network_mode="host",  # Intentional: moderate isolation allows pip/npm/apt installs
             mem_limit="512m",
             cpu_quota=100_000,
             cpu_period=100_000,
+            pids_limit=128,
             auto_remove=False,
             detach=True,
         )
@@ -332,7 +333,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     handler = handlers.get(name)
     if handler is None:
         raise ValueError(f"Unknown tool: {name}")
-    result = handler(**arguments)
+    result = await asyncio.to_thread(handler, **arguments)
     return [TextContent(type="text", text=result)]
 
 
