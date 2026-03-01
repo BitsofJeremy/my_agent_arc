@@ -124,6 +124,15 @@ _TOOL_SCHEMAS: list[dict[str, Any]] = [
                             "Do NOT include 'import server' — server is already defined."
                         ),
                     },
+                    "dependencies": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "pip package names required by this skill "
+                            "(e.g. ['requests', 'pytz']). "
+                            "'mcp' is always included automatically — do not list it."
+                        ),
+                    },
                 },
                 "required": ["name", "description", "code"],
             },
@@ -315,7 +324,9 @@ def _write_mcp_config(config: dict[str, Any]) -> None:
         f.write("\n")
 
 
-async def tool_write_skill(name: str, description: str, code: str) -> str:
+async def tool_write_skill(
+    name: str, description: str, code: str, dependencies: list[str] | None = None
+) -> str:
     """Generate an MCP skill server file and hot-reload the MCP manager."""
     from arc.mcp_client import get_mcp_manager, reload_mcp_manager
 
@@ -344,6 +355,10 @@ async def tool_write_skill(name: str, description: str, code: str) -> str:
     ]
     code = "\n".join(cleaned_lines)
 
+    # Build PEP 723 deps block — mcp always first, then caller extras (deduplicated).
+    all_deps = ["mcp"] + [d for d in (dependencies or []) if d != "mcp"]
+    deps_block = "".join(f'#   "{dep}",\n' for dep in all_deps)
+
     # Generate the server file.
     _TOOLS_DIR.mkdir(parents=True, exist_ok=True)
     server_file = _TOOLS_DIR / f"{name}_server.py"
@@ -352,6 +367,7 @@ async def tool_write_skill(name: str, description: str, code: str) -> str:
         marker=_ARC_GENERATED_MARKER,
         name=name,
         description=description,
+        deps=deps_block,
         code=code,
     )
     server_file.write_text(source, encoding="utf-8")
@@ -360,8 +376,8 @@ async def tool_write_skill(name: str, description: str, code: str) -> str:
     # Update mcp_servers.json.
     config = _read_mcp_config()
     config.setdefault("servers", {})[name] = {
-        "command": "python",
-        "args": [f"tools/{name}_server.py"],
+        "command": "uv",
+        "args": ["run", f"tools/{name}_server.py"],
     }
     _write_mcp_config(config)
     logger.info("Updated mcp_servers.json with skill '%s'", name)
