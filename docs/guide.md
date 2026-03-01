@@ -19,10 +19,11 @@
 9. [Built-in Tools](#9-built-in-tools)
 10. [MCP Skill Servers](#10-mcp-skill-servers)
 11. [Self-Authoring Skills](#11-self-authoring-skills)
-12. [Customising ARC's Personality](#12-customising-arcs-personality)
-13. [Triggers & Scheduling](#13-triggers--scheduling)
-14. [Deployment on Linux](#14-deployment-on-linux)
-15. [Troubleshooting](#15-troubleshooting)
+12. [Docker Code Execution](#12-docker-code-execution)
+13. [Customising ARC's Personality](#13-customising-arcs-personality)
+14. [Triggers & Scheduling](#14-triggers--scheduling)
+15. [Deployment on Linux](#15-deployment-on-linux)
+16. [Troubleshooting](#16-troubleshooting)
 
 ---
 
@@ -90,6 +91,7 @@ The system is organised into four architectural zones:
 - **Python 3.11+** — [python.org/downloads](https://www.python.org/downloads/)
 - **Ollama** — [ollama.com/download](https://ollama.com/download)
 - **Git** — to clone the repository
+- **Docker Desktop** (macOS/Windows) or **Docker Engine** (Linux) — if you want code execution via the Docker tools (see [Section 12](#12-docker-code-execution))
 
 ### Step 1: Clone the repository
 
@@ -798,7 +800,192 @@ ARC can remove its own skills via `remove_skill(name)`. This deletes the server 
 
 ---
 
-## 12. Customising ARC's Personality
+## 12. Docker Code Execution
+
+ARC ships with a dedicated MCP server — `tools/docker_server.py` — that runs code inside ephemeral Docker containers. Each invocation spins up a fresh container, executes the code, returns the output, and removes the container. Nothing persists between calls. No interpreter state, no leftover files, no side effects on the host.
+
+This makes it practical to run untrusted or experimental code, install dependencies freely, and benchmark or test snippets in a clean environment without any risk to the host machine.
+
+### Prerequisites
+
+- **Docker Desktop** (macOS or Windows) — [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop)
+- **Docker Engine** (Linux) — [docs.docker.com/engine/install](https://docs.docker.com/engine/install/)
+- The `docker` Python package — already present in `requirements.txt` (`docker>=7.0.0`), installed automatically with `pip install -r requirements.txt`
+
+Docker must be running before ARC starts. The docker server will fail to connect to the Docker daemon at startup otherwise.
+
+### Configuration
+
+Add the `docker` server entry to `data/mcp_servers.json`:
+
+**macOS (Docker Desktop):**
+
+```json
+{
+  "servers": {
+    "docker": {
+      "command": "python",
+      "args": ["tools/docker_server.py"],
+      "env": {
+        "DOCKER_HOST": "unix:///Users/jeremy/.docker/run/docker.sock"
+      }
+    }
+  }
+}
+```
+
+Docker Desktop on macOS places the Unix socket at a user-specific path rather than the system default `/var/run/docker.sock`. The `DOCKER_HOST` environment variable tells the `docker` Python library where to find it. Replace the path with your own username if it differs.
+
+**Linux (Docker Engine):**
+
+```json
+{
+  "servers": {
+    "docker": {
+      "command": "python",
+      "args": ["tools/docker_server.py"]
+    }
+  }
+}
+```
+
+Standard Docker Engine installations on Linux use `/var/run/docker.sock`, which the library finds automatically. No `env` block is needed. If your installation uses a non-standard socket path, add a `DOCKER_HOST` entry as above.
+
+After updating `mcp_servers.json`, restart ARC. The docker server and its four tools will appear on the admin dashboard.
+
+### The four tools
+
+#### `run_python`
+
+Runs Python code in an isolated `python:3.12-slim` container.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `code` | string | Yes | — | Python source code to execute |
+| `packages` | list of strings | No | `[]` | Packages to install via `pip` before running |
+| `timeout_seconds` | integer | No | `60` | Maximum execution time before the container is killed |
+
+#### `run_shell`
+
+Runs a Bash script in an `ubuntu:24.04` container.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `script` | string | Yes | — | Bash script to execute |
+| `packages` | list of strings | No | `[]` | Packages to install via `apt` before running |
+| `timeout_seconds` | integer | No | `60` | Maximum execution time before the container is killed |
+
+#### `run_node`
+
+Runs JavaScript in a `node:22-slim` container.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `code` | string | Yes | — | JavaScript source code to execute |
+| `packages` | list of strings | No | `[]` | Packages to install via `npm` before running |
+| `timeout_seconds` | integer | No | `60` | Maximum execution time before the container is killed |
+
+#### `run_in_image`
+
+Runs an arbitrary command in any Docker image. Use this when none of the specialised tools fit.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `image` | string | Yes | — | Docker image name (e.g. `alpine:3.19`, `rust:1.78-slim`) |
+| `command` | list of strings | Yes | — | Command and arguments to execute (e.g. `["python3", "/tmp/script"]`) |
+| `code` | string | No | — | Optional source code or script content — written to `/tmp/script` inside the container before the command runs |
+| `timeout_seconds` | integer | No | `60` | Maximum execution time before the container is killed |
+
+### Result format
+
+All four tools return output in the same structured format:
+
+```
+=== Container Execution Result ===
+Exit code: 0
+Runtime: 214ms
+
+--- stdout ---
+Hello from Python!
+
+--- stderr ---
+(empty)
+```
+
+ARC receives this as a single text block and uses it to formulate its response. A non-zero exit code, stderr output, or a timeout are all surfaced in this format for the model to interpret.
+
+### Container resource limits
+
+Every container is started with the following constraints:
+
+| Resource | Limit |
+| --- | --- |
+| RAM | 512 MB |
+| CPU | 1 core |
+| PIDs | 128 |
+| Network | Internet access enabled |
+
+These defaults prevent a single code execution from starving the host. Internet access is intentionally left open — if ARC needs to install packages or fetch data during execution, it can.
+
+### Container lifecycle and cleanup
+
+Containers are labelled `arc.managed=true` at creation. Three layers of cleanup ensure no orphaned containers accumulate:
+
+1. **Per-execution cleanup** — every container is removed in a `finally` block immediately after execution completes, whether it succeeded, failed, or timed out.
+2. **Startup cleanup** — when `docker_server.py` initialises, it queries Docker for all containers with the `arc.managed=true` label and removes any that are already stopped. This recovers from crashes that prevented the `finally` block from running.
+3. **Background sweep** — a coroutine runs every five minutes, repeating the same stale-container sweep in case any containers leaked during normal operation.
+
+### Image caching
+
+Docker images are not bundled with ARC. On the first call to a given tool, Docker pulls the required image from Docker Hub (`python:3.12-slim`, `ubuntu:24.04`, `node:22-slim`). This pull can take 30–60 seconds depending on network speed and image size. Subsequent calls use the locally cached image and start immediately.
+
+If you are on a slow connection or want to pre-cache images before first use:
+
+```bash
+docker pull python:3.12-slim
+docker pull ubuntu:24.04
+docker pull node:22-slim
+```
+
+### Example usage
+
+When asked "calculate the sum of the first 1000 primes", ARC calls `run_python` rather than attempting to estimate the answer:
+
+```
+ARC calls: run_python(code="""
+def sieve(n):
+    is_prime = [True] * (n + 1)
+    is_prime[0] = is_prime[1] = False
+    for i in range(2, int(n**0.5) + 1):
+        if is_prime[i]:
+            for j in range(i*i, n+1, i):
+                is_prime[j] = False
+    return [i for i in range(2, n+1) if is_prime[i]]
+
+primes = sieve(8000)[:1000]
+print(f"Sum of first 1000 primes: {sum(primes)}")
+""")
+```
+
+Container result:
+
+```
+=== Container Execution Result ===
+Exit code: 0
+Runtime: 183ms
+
+--- stdout ---
+Sum of first 1000 primes: 3682913
+
+--- stderr ---
+(empty)
+```
+
+ARC's `soul.md` instructs it to reach for `run_python` first rather than estimating — code that can be verified should be verified.
+
+---
+
+## 13. Customising ARC's Personality
 
 ARC's personality and context are defined in markdown files in the `data/` directory. Edit them to make ARC your own. Changes to these files take effect on the next message — no restart required.
 
@@ -854,7 +1041,7 @@ Tell ARC about yourself. ARC reads this on every trigger so it knows who it's wo
 
 ---
 
-## 13. Triggers & Scheduling
+## 14. Triggers & Scheduling
 
 ARC has four trigger sources. All triggers funnel through the same `handle_trigger` function in `src/arc/gateway.py`, which delegates to `run_agent` in the agentic loop.
 
@@ -899,7 +1086,7 @@ The admin chat at `/chat` is also a trigger source, using `source="admin"` and s
 
 ---
 
-## 14. Deployment on Linux
+## 15. Deployment on Linux
 
 ARC includes a production-ready install script and systemd service file for Debian/Ubuntu servers.
 
@@ -1009,7 +1196,7 @@ Edit `/etc/systemd/system/arc.service` to match your installation path and user 
 
 ---
 
-## 15. Troubleshooting
+## 16. Troubleshooting
 
 ### Ollama not running
 

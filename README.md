@@ -65,6 +65,7 @@ ARC is organised into four zones:
 - **Context compaction** — automatic summarisation keeps conversations within the token budget
 - **Self-programming** — ARC can rewrite its own heartbeat instructions to change future behaviour
 - **Self-authoring skills** — ARC can create new MCP tool servers at runtime and hot-reload them
+- **Sandboxed code execution** — ARC can spin up ephemeral Docker containers to run Python, shell scripts, JavaScript, or any language
 - **MCP plugin ecosystem** — extend capabilities with any [Model Context Protocol](https://modelcontextprotocol.io/) server
 - **Telegram + Web chat** — talk to ARC via Telegram or the built-in admin dashboard
 - **Customisable personality** — edit markdown files to change voice, character, and behaviour instantly
@@ -82,6 +83,10 @@ cd my_agent_arc
 # 2. Pull models
 ollama pull minimax-m2.5
 ollama pull nomic-embed-text
+
+# 2.5. Install Docker (required for sandboxed code execution)
+# macOS/Windows: install Docker Desktop — https://www.docker.com/products/docker-desktop/
+# Linux:         install Docker Engine — https://docs.docker.com/engine/install/
 
 # 3. Install
 python3 -m venv .venv && source .venv/bin/activate
@@ -121,7 +126,8 @@ my_agent_arc/
 │   ├── user.md              # User profile
 │   ├── heartbeat.md         # Self-directed heartbeat instructions
 │   └── mcp_servers.json     # MCP server configuration
-├── tools/                   # MCP skill servers
+├── tools/                   # MCP tool servers
+│   ├── docker_server.py     # Docker execution MCP server (run_python, run_shell, run_node, run_in_image)
 │   └── test_server.py       # Example MCP server (ping + echo)
 ├── templates/               # Jinja2 HTML for admin UI
 ├── scripts/
@@ -148,6 +154,7 @@ my_agent_arc/
 | Admin Dashboard | [FastAPI](https://fastapi.tiangolo.com/) + Jinja2 + SSE |
 | Scheduling | [APScheduler](https://apscheduler.readthedocs.io/) |
 | Skill Plugins | [Model Context Protocol](https://modelcontextprotocol.io/) (stdio transport) |
+| Sandboxed Execution | Docker (ephemeral containers via Python Docker SDK) |
 
 ---
 
