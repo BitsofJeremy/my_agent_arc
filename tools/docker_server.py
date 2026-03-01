@@ -21,6 +21,9 @@ import requests.exceptions
 
 server = Server("docker-server")
 
+# Label applied to every container we create so we can find and clean them up.
+_CONTAINER_LABEL = "arc.managed"
+
 # ---------------------------------------------------------------------------
 # Docker client (lazy init — allows import without Docker running)
 # ---------------------------------------------------------------------------
@@ -39,6 +42,31 @@ def _reset_client() -> None:
     """Discard the cached Docker client so the next call reconnects fresh."""
     global _docker_client
     _docker_client = None
+
+
+def _cleanup_stale_containers() -> int:
+    """Kill and remove all arc-managed containers.
+
+    Catches containers that were not cleaned up due to a crash, timeout
+    abandonment, or SIGKILL.  Safe to call at startup and periodically.
+    Returns the number of containers removed.
+    """
+    try:
+        client = _get_client()
+        containers = client.containers.list(
+            all=True,
+            filters={"label": f"{_CONTAINER_LABEL}=true"},
+        )
+        removed = 0
+        for c in containers:
+            try:
+                c.remove(force=True)
+                removed += 1
+            except Exception:
+                pass
+        return removed
+    except docker.errors.DockerException:
+        return 0
 
 
 # ---------------------------------------------------------------------------
@@ -192,6 +220,7 @@ def _run_container(
             image=image,
             command=command,
             volumes=volumes,
+            labels={_CONTAINER_LABEL: "true"},
             network_mode="host",  # Intentional: moderate isolation allows pip/npm/apt installs
             mem_limit="512m",
             cpu_quota=100_000,
@@ -369,9 +398,24 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     return [TextContent(type="text", text=result)]
 
 
+async def _periodic_cleanup(interval: int = 300) -> None:
+    """Background task: remove stale arc-managed containers every *interval* seconds."""
+    while True:
+        await asyncio.sleep(interval)
+        await asyncio.to_thread(_cleanup_stale_containers)
+
+
 async def main() -> None:
-    async with stdio_server() as (read, write):
-        await server.run(read, write, server.create_initialization_options())
+    # Remove any containers left over from a previous crashed session.
+    await asyncio.to_thread(_cleanup_stale_containers)
+
+    # Keep sweeping in the background every 5 minutes.
+    cleanup_task = asyncio.create_task(_periodic_cleanup())
+    try:
+        async with stdio_server() as (read, write):
+            await server.run(read, write, server.create_initialization_options())
+    finally:
+        cleanup_task.cancel()
 
 
 if __name__ == "__main__":
