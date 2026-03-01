@@ -20,6 +20,12 @@
       "env": {
         "DOCKER_HOST": "unix:///Users/jeremy/.docker/run/docker.sock"
       }
+    },
+    "get_time": {
+      "command": "python",
+      "args": [
+        "tools/get_time_server.py"
+      ]
     }
   }
 }

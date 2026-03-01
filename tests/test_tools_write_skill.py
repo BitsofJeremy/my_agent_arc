@@ -1,5 +1,4 @@
 """Tests for write_skill template and PEP 723 compliance."""
-import pytest
 from arc.tools import _SKILL_TEMPLATE, _ARC_GENERATED_MARKER
 
 
