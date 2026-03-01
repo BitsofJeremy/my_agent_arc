@@ -3,6 +3,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 import docker.errors
+import requests.exceptions
 import os
 
 
@@ -214,7 +215,7 @@ def test_run_container_timeout_kills_and_reports():
     import docker_server
 
     mock_container = MagicMock()
-    mock_container.wait.side_effect = Exception("Read timed out")
+    mock_container.wait.side_effect = requests.exceptions.ReadTimeout("Read timed out")
     mock_container.logs.side_effect = lambda stdout=True, stderr=False: b"partial" if stdout and not stderr else b""
     mock_client = MagicMock()
     mock_client.containers.run.return_value = mock_container

@@ -16,6 +16,7 @@ from typing import Any
 
 import docker
 import docker.errors
+import requests.exceptions
 
 server = Server("docker-server")
 
@@ -195,7 +196,7 @@ def _run_container(
         try:
             result = container.wait(timeout=timeout)
             exit_code = result["StatusCode"]
-        except Exception:
+        except requests.exceptions.ReadTimeout:
             try:
                 container.kill()
             except Exception:
@@ -227,7 +228,7 @@ def _run_container(
         return f"=== Container Execution Result ===\nError: Image '{image}' not found."
     except docker.errors.DockerException as e:
         err = str(e)
-        if any(k in err for k in ("ConnectionRefused", "FileNotFoundError", "Error while fetching server")):
+        if any(k in err for k in ("Connection aborted", "Connection refused", "FileNotFoundError", "Error while fetching server")):
             return (
                 "=== Container Execution Result ===\n"
                 "Error: Docker daemon is not accessible. Is Docker running?"
