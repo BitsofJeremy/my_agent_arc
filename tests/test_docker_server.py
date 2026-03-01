@@ -266,3 +266,223 @@ def test_run_container_image_not_found():
 
     assert "not found" in result.lower()
     assert "thisimage:doesnotexist" in result
+
+
+# ---------------------------------------------------------------------------
+# _run_python handler tests
+# ---------------------------------------------------------------------------
+
+def test_run_python_uses_python_image():
+    """_run_python calls _run_container with python:3.12-slim image."""
+    import docker_server
+    with patch.object(docker_server, "_run_container", return_value="ok") as mock_run:
+        docker_server._run_python(code="print('hi')")
+    call_kwargs = mock_run.call_args.kwargs or dict(mock_run.call_args[0][0] if mock_run.call_args[0] else {})
+    # Try both positional and keyword
+    all_kwargs = {**mock_run.call_args.kwargs}
+    if mock_run.call_args.args:
+        import inspect
+        sig = inspect.signature(docker_server._run_container)
+        params = list(sig.parameters.keys())
+        for i, arg in enumerate(mock_run.call_args.args):
+            if i < len(params):
+                all_kwargs[params[i]] = arg
+    assert all_kwargs.get("image") == "python:3.12-slim"
+
+
+def test_run_python_passes_code_through():
+    """_run_python passes the original code in the code argument."""
+    import docker_server
+    with patch.object(docker_server, "_run_container", return_value="ok") as mock_run:
+        docker_server._run_python(code="print('hello')")
+    code_arg = mock_run.call_args.kwargs.get("code") or (mock_run.call_args.args[2] if len(mock_run.call_args.args) > 2 else "")
+    assert "print('hello')" in code_arg
+
+
+def test_run_python_no_packages_no_pip_wrapper():
+    """_run_python without packages passes code without pip install."""
+    import docker_server
+    with patch.object(docker_server, "_run_container", return_value="ok") as mock_run:
+        docker_server._run_python(code="x = 1")
+    code_arg = mock_run.call_args.kwargs.get("code") or ""
+    if not code_arg and mock_run.call_args.args:
+        code_arg = mock_run.call_args.args[2] if len(mock_run.call_args.args) > 2 else ""
+    assert "pip" not in code_arg
+
+
+def test_run_python_with_packages_prepends_pip_install():
+    """_run_python prepends pip install block when packages are provided."""
+    import docker_server
+    with patch.object(docker_server, "_run_container", return_value="ok") as mock_run:
+        docker_server._run_python(code="import requests", packages=["requests", "pandas"])
+    code_arg = mock_run.call_args.kwargs.get("code") or ""
+    if not code_arg and mock_run.call_args.args:
+        code_arg = mock_run.call_args.args[2] if len(mock_run.call_args.args) > 2 else ""
+    assert "pip" in code_arg
+    assert "requests" in code_arg
+    assert "pandas" in code_arg
+    assert "import requests" in code_arg
+
+
+def test_run_python_respects_timeout():
+    """_run_python forwards timeout_seconds as timeout to _run_container."""
+    import docker_server
+    with patch.object(docker_server, "_run_container", return_value="ok") as mock_run:
+        docker_server._run_python(code="pass", timeout_seconds=120)
+    timeout_arg = mock_run.call_args.kwargs.get("timeout")
+    if timeout_arg is None and mock_run.call_args.args:
+        timeout_arg = mock_run.call_args.args[3] if len(mock_run.call_args.args) > 3 else None
+    assert timeout_arg == 120
+
+
+# ---------------------------------------------------------------------------
+# _run_shell handler tests
+# ---------------------------------------------------------------------------
+
+def test_run_shell_uses_ubuntu_image():
+    """_run_shell calls _run_container with ubuntu:24.04 image."""
+    import docker_server
+    with patch.object(docker_server, "_run_container", return_value="ok") as mock_run:
+        docker_server._run_shell(script="echo hi")
+    image_arg = mock_run.call_args.kwargs.get("image") or (mock_run.call_args.args[0] if mock_run.call_args.args else "")
+    assert image_arg == "ubuntu:24.04"
+
+
+def test_run_shell_uses_bash_command():
+    """_run_shell runs the script with bash."""
+    import docker_server
+    with patch.object(docker_server, "_run_container", return_value="ok") as mock_run:
+        docker_server._run_shell(script="echo hi")
+    cmd_arg = mock_run.call_args.kwargs.get("command") or (mock_run.call_args.args[1] if len(mock_run.call_args.args) > 1 else [])
+    assert cmd_arg[0] == "bash"
+
+
+def test_run_shell_with_packages_prepends_apt_install():
+    """_run_shell prepends apt-get install when packages provided."""
+    import docker_server
+    with patch.object(docker_server, "_run_container", return_value="ok") as mock_run:
+        docker_server._run_shell(script="curl example.com", packages=["curl"])
+    code_arg = mock_run.call_args.kwargs.get("code") or (mock_run.call_args.args[2] if len(mock_run.call_args.args) > 2 else "")
+    assert "apt-get" in code_arg
+    assert "curl" in code_arg
+    assert "curl example.com" in code_arg
+
+
+def test_run_shell_no_packages_no_apt():
+    """_run_shell without packages does not include apt-get."""
+    import docker_server
+    with patch.object(docker_server, "_run_container", return_value="ok") as mock_run:
+        docker_server._run_shell(script="ls -la")
+    code_arg = mock_run.call_args.kwargs.get("code") or (mock_run.call_args.args[2] if len(mock_run.call_args.args) > 2 else "")
+    assert "apt-get" not in code_arg
+
+
+# ---------------------------------------------------------------------------
+# _run_node handler tests
+# ---------------------------------------------------------------------------
+
+def test_run_node_uses_node_image():
+    """_run_node calls _run_container with node:22-slim image."""
+    import docker_server
+    with patch.object(docker_server, "_run_container", return_value="ok") as mock_run:
+        docker_server._run_node(code="console.log('hi')")
+    image_arg = mock_run.call_args.kwargs.get("image") or (mock_run.call_args.args[0] if mock_run.call_args.args else "")
+    assert image_arg == "node:22-slim"
+
+
+def test_run_node_with_packages_prepends_npm_install():
+    """_run_node prepends npm install when packages provided."""
+    import docker_server
+    with patch.object(docker_server, "_run_container", return_value="ok") as mock_run:
+        docker_server._run_node(code="const _ = require('lodash')", packages=["lodash"])
+    code_arg = mock_run.call_args.kwargs.get("code") or (mock_run.call_args.args[2] if len(mock_run.call_args.args) > 2 else "")
+    assert "npm" in code_arg
+    assert "lodash" in code_arg
+    assert "require('lodash')" in code_arg
+
+
+def test_run_node_no_packages_no_npm():
+    """_run_node without packages does not include npm."""
+    import docker_server
+    with patch.object(docker_server, "_run_container", return_value="ok") as mock_run:
+        docker_server._run_node(code="console.log(42)")
+    code_arg = mock_run.call_args.kwargs.get("code") or (mock_run.call_args.args[2] if len(mock_run.call_args.args) > 2 else "")
+    assert "npm" not in code_arg
+
+
+# ---------------------------------------------------------------------------
+# _run_in_image handler tests
+# ---------------------------------------------------------------------------
+
+def test_run_in_image_passes_image_and_command():
+    """_run_in_image passes image and command through to _run_container."""
+    import docker_server
+    with patch.object(docker_server, "_run_container", return_value="ok") as mock_run:
+        docker_server._run_in_image(image="rust:1.82", command=["rustc", "--version"], timeout_seconds=45)
+    kw = mock_run.call_args.kwargs
+    image_arg = kw.get("image") or (mock_run.call_args.args[0] if mock_run.call_args.args else "")
+    cmd_arg = kw.get("command") or (mock_run.call_args.args[1] if len(mock_run.call_args.args) > 1 else [])
+    timeout_arg = kw.get("timeout")
+    assert image_arg == "rust:1.82"
+    assert cmd_arg == ["rustc", "--version"]
+    assert timeout_arg == 45
+
+
+def test_run_in_image_passes_code():
+    """_run_in_image forwards code parameter to _run_container."""
+    import docker_server
+    with patch.object(docker_server, "_run_container", return_value="ok") as mock_run:
+        docker_server._run_in_image(
+            image="golang:1.23",
+            command=["go", "run", "/tmp/script"],
+            code="package main\nfunc main() {}",
+        )
+    code_arg = mock_run.call_args.kwargs.get("code") or (mock_run.call_args.args[2] if len(mock_run.call_args.args) > 2 else "")
+    assert "package main" in (code_arg or "")
+
+
+# ---------------------------------------------------------------------------
+# call_tool dispatcher tests
+# ---------------------------------------------------------------------------
+
+async def test_call_tool_dispatches_run_python():
+    """call_tool routes 'run_python' to _run_python and wraps in TextContent."""
+    import docker_server
+    with patch.object(docker_server, "_run_python", return_value="python result") as mock_handler:
+        result = await docker_server.call_tool("run_python", {"code": "print('hi')"})
+    mock_handler.assert_called_once_with(code="print('hi')")
+    assert len(result) == 1
+    assert result[0].text == "python result"
+
+
+async def test_call_tool_dispatches_run_shell():
+    """call_tool routes 'run_shell' to _run_shell."""
+    import docker_server
+    with patch.object(docker_server, "_run_shell", return_value="shell result"):
+        result = await docker_server.call_tool("run_shell", {"script": "echo hi"})
+    assert result[0].text == "shell result"
+
+
+async def test_call_tool_dispatches_run_node():
+    """call_tool routes 'run_node' to _run_node."""
+    import docker_server
+    with patch.object(docker_server, "_run_node", return_value="node result"):
+        result = await docker_server.call_tool("run_node", {"code": "console.log('hi')"})
+    assert result[0].text == "node result"
+
+
+async def test_call_tool_dispatches_run_in_image():
+    """call_tool routes 'run_in_image' to _run_in_image."""
+    import docker_server
+    with patch.object(docker_server, "_run_in_image", return_value="image result"):
+        result = await docker_server.call_tool(
+            "run_in_image", {"image": "rust:1.82", "command": ["rustc", "--version"]}
+        )
+    assert result[0].text == "image result"
+
+
+async def test_call_tool_raises_for_unknown_tool():
+    """call_tool raises ValueError for unknown tool names."""
+    import docker_server
+    with pytest.raises(ValueError, match="Unknown tool"):
+        await docker_server.call_tool("nonexistent_tool", {})

@@ -246,22 +246,93 @@ def _run_container(
             except Exception:
                 pass
 
-def _run_python(code: str, packages: list[str] | None = None, timeout_seconds: int = 60) -> str:
-    raise NotImplementedError
+def _run_python(
+    code: str,
+    packages: list[str] | None = None,
+    timeout_seconds: int = 60,
+) -> str:
+    if packages:
+        pkg_args = ", ".join(repr(p) for p in packages)
+        script = (
+            f"import subprocess\n"
+            f"subprocess.run(['pip', 'install', '-q', {pkg_args}], check=True)\n"
+            f"\n{code}"
+        )
+    else:
+        script = code
 
-def _run_shell(script: str, packages: list[str] | None = None, timeout_seconds: int = 60) -> str:
-    raise NotImplementedError
+    return _run_container(
+        image="python:3.12-slim",
+        command=["python", "/tmp/script"],
+        code=script,
+        timeout=timeout_seconds,
+    )
 
-def _run_node(code: str, packages: list[str] | None = None, timeout_seconds: int = 60) -> str:
-    raise NotImplementedError
 
-def _run_in_image(image: str, command: list[str], code: str | None = None, timeout_seconds: int = 60) -> str:
-    raise NotImplementedError
+def _run_shell(
+    script: str,
+    packages: list[str] | None = None,
+    timeout_seconds: int = 60,
+) -> str:
+    if packages:
+        pkg_str = " ".join(packages)
+        full_script = f"apt-get update -q && apt-get install -y -q {pkg_str}\n{script}"
+    else:
+        full_script = script
+
+    return _run_container(
+        image="ubuntu:24.04",
+        command=["bash", "/tmp/script"],
+        code=full_script,
+        timeout=timeout_seconds,
+    )
+
+
+def _run_node(
+    code: str,
+    packages: list[str] | None = None,
+    timeout_seconds: int = 60,
+) -> str:
+    if packages:
+        pkg_str = " ".join(packages)
+        script = (
+            f"const {{ execSync }} = require('child_process');\n"
+            f"execSync('npm install -g {pkg_str}', {{ stdio: 'pipe' }});\n"
+            f"\n{code}"
+        )
+    else:
+        script = code
+
+    return _run_container(
+        image="node:22-slim",
+        command=["node", "/tmp/script"],
+        code=script,
+        timeout=timeout_seconds,
+    )
+
+
+def _run_in_image(
+    image: str,
+    command: list[str],
+    code: str | None = None,
+    timeout_seconds: int = 60,
+) -> str:
+    return _run_container(image=image, command=command, code=code, timeout=timeout_seconds)
 
 
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    raise NotImplementedError(f"call_tool not yet implemented: {name}")
+    handlers = {
+        "run_python": _run_python,
+        "run_shell": _run_shell,
+        "run_node": _run_node,
+        "run_in_image": _run_in_image,
+    }
+    handler = handlers.get(name)
+    if handler is None:
+        raise ValueError(f"Unknown tool: {name}")
+    result = handler(**arguments)
+    return [TextContent(type="text", text=result)]
 
 
 async def main() -> None:
