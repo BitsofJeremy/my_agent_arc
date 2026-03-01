@@ -35,6 +35,12 @@ def _get_client() -> docker.DockerClient:
     return _docker_client
 
 
+def _reset_client() -> None:
+    """Discard the cached Docker client so the next call reconnects fresh."""
+    global _docker_client
+    _docker_client = None
+
+
 # ---------------------------------------------------------------------------
 # Tool schemas
 # ---------------------------------------------------------------------------
@@ -231,6 +237,7 @@ def _run_container(
     except docker.errors.DockerException as e:
         err = str(e)
         if any(k in err for k in ("Connection aborted", "Connection refused", "FileNotFoundError", "Error while fetching server")):
+            _reset_client()  # Force reconnect on next call
             return (
                 "=== Container Execution Result ===\n"
                 "Error: Docker daemon is not accessible. Is Docker running?"
@@ -333,7 +340,32 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     handler = handlers.get(name)
     if handler is None:
         raise ValueError(f"Unknown tool: {name}")
-    result = await asyncio.to_thread(handler, **arguments)
+
+    # Overall wall-clock timeout: user timeout + 30s buffer for Docker overhead.
+    # Guards against client.containers.run() hanging (e.g. slow image pull or
+    # Docker daemon unresponsive).
+    #
+    # Uses asyncio.wait() NOT asyncio.wait_for(): in Python 3.12+ wait_for
+    # blocks until the cancelled coroutine fully completes before raising
+    # TimeoutError, which defeats the purpose when the inner thread is stuck.
+    # asyncio.wait() returns immediately after the timeout, leaving the thread
+    # to finish in the background (acceptable — it will eventually clean itself
+    # up or expire when the process exits).
+    user_timeout = int(arguments.get("timeout_seconds", 60))
+    total_timeout = user_timeout + 30
+
+    task = asyncio.create_task(asyncio.to_thread(handler, **arguments))
+    done, _ = await asyncio.wait({task}, timeout=total_timeout)
+
+    if not done:
+        _reset_client()
+        result = (
+            f"=== Container Execution Result ===\n"
+            f"Error: Operation timed out after {total_timeout}s. "
+            f"Docker may be unresponsive or the image pull is taking too long."
+        )
+    else:
+        result = task.result()
     return [TextContent(type="text", text=result)]
 
 
