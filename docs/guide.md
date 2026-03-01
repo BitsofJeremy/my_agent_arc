@@ -603,8 +603,8 @@ Edit `data/mcp_servers.json`:
 {
   "servers": {
     "server-name": {
-      "command": "python",
-      "args": ["tools/my_server.py"],
+      "command": "uv",
+      "args": ["run", "tools/my_server.py"],
       "env": {
         "OPTIONAL_VAR": "value"
       }
@@ -617,7 +617,7 @@ Each server entry supports:
 
 | Field | Required | Description |
 | --- | --- | --- |
-| `command` | Yes | Executable to run (`python`, `npx`, `node`, etc.) |
+| `command` | Yes | Executable to run (`uv`, `npx`, `node`, etc.) |
 | `args` | No | Command-line arguments (list of strings) |
 | `env` | No | Additional environment variables (key-value object) |
 
