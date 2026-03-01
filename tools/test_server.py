@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "mcp",
+# ]
+# ///
 """A minimal MCP test server providing ping and echo tools.
 
-Run standalone:  python tools/test_server.py
+Run standalone:  uv run tools/test_server.py
 Used by ARC via data/mcp_servers.json as a stdio MCP server.
 """
 

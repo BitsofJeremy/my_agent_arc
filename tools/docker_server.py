@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "mcp",
+#   "docker",
+#   "requests",
+# ]
+# ///
 """ARC Docker Execution MCP Server.
 
 Provides sandboxed code execution via ephemeral Docker containers.
