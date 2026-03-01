@@ -10,6 +10,7 @@ from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 import asyncio
 import os
+import shlex
 import tempfile
 import time
 from typing import Any
@@ -275,7 +276,7 @@ def _run_shell(
     timeout_seconds: int = 60,
 ) -> str:
     if packages:
-        pkg_str = " ".join(packages)
+        pkg_str = " ".join(shlex.quote(p) for p in packages)
         full_script = f"apt-get update -q && apt-get install -y -q {pkg_str}\n{script}"
     else:
         full_script = script
@@ -294,7 +295,7 @@ def _run_node(
     timeout_seconds: int = 60,
 ) -> str:
     if packages:
-        pkg_str = " ".join(packages)
+        pkg_str = " ".join(shlex.quote(p) for p in packages)
         script = (
             f"const {{ execSync }} = require('child_process');\n"
             f"execSync('npm install -g {pkg_str}', {{ stdio: 'pipe' }});\n"
