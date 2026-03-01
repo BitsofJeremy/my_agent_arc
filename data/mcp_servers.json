@@ -11,6 +11,12 @@
       "args": [
         "tools/dice_server.py"
       ]
+    },
+    "docker": {
+      "command": "python",
+      "args": [
+        "tools/docker_server.py"
+      ]
     }
   }
 }
