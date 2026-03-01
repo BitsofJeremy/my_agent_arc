@@ -262,6 +262,11 @@ _MCP_CONFIG_PATH = PROJECT_ROOT / "data" / "mcp_servers.json"
 
 _SKILL_TEMPLATE = Template('''\
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+$deps# ]
+# ///
 $marker: $name
 # $description
 
