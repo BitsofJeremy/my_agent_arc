@@ -88,7 +88,10 @@ ollama pull nomic-embed-text
 # macOS/Windows: install Docker Desktop — https://www.docker.com/products/docker-desktop/
 # Linux:         install Docker Engine — https://docs.docker.com/engine/install/
 
-# 3. Install
+# 3. Install uv (manages MCP tool script dependencies via PEP 723)
+pip install uv   # or: brew install uv
+
+# 3.5. Install ARC's own dependencies
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
@@ -126,8 +129,10 @@ my_agent_arc/
 │   ├── user.md              # User profile
 │   ├── heartbeat.md         # Self-directed heartbeat instructions
 │   └── mcp_servers.json     # MCP server configuration
-├── tools/                   # MCP tool servers
+├── tools/                   # MCP tool servers (PEP 723 — run via `uv run`)
 │   ├── docker_server.py     # Docker execution MCP server (run_python, run_shell, run_node, run_in_image)
+│   ├── dice_server.py       # Dice-rolling MCP server
+│   ├── get_time_server.py   # Timezone-aware time MCP server
 │   └── test_server.py       # Example MCP server (ping + echo)
 ├── templates/               # Jinja2 HTML for admin UI
 ├── scripts/
@@ -154,6 +159,7 @@ my_agent_arc/
 | Admin Dashboard | [FastAPI](https://fastapi.tiangolo.com/) + Jinja2 + SSE |
 | Scheduling | [APScheduler](https://apscheduler.readthedocs.io/) |
 | Skill Plugins | [Model Context Protocol](https://modelcontextprotocol.io/) (stdio transport) |
+| Tool Script Runner | [uv](https://docs.astral.sh/uv/) — PEP 723 inline dependency management |
 | Sandboxed Execution | Docker (ephemeral containers via Python Docker SDK) |
 
 ---
