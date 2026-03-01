@@ -159,9 +159,91 @@ async def list_tools() -> list[Tool]:
     return _TOOLS
 
 
-# Stubs — implemented in later tasks
-def _run_container(image: str, command: list[str], code: str | None = None, timeout: int = 60) -> str:
-    raise NotImplementedError
+def _run_container(
+    image: str,
+    command: list[str],
+    code: str | None = None,
+    timeout: int = 60,
+) -> str:
+    """Spin up an ephemeral container, run command, return formatted result."""
+    start = time.monotonic()
+    tmp_path: str | None = None
+    container = None
+
+    try:
+        client = _get_client()
+
+        volumes: dict[str, Any] = {}
+        if code is not None:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".tmp", delete=False) as f:
+                f.write(code)
+                tmp_path = f.name
+            volumes[tmp_path] = {"bind": "/tmp/script", "mode": "ro"}
+
+        container = client.containers.run(
+            image=image,
+            command=command,
+            volumes=volumes,
+            network_mode="host",
+            mem_limit="512m",
+            cpu_quota=100_000,
+            cpu_period=100_000,
+            auto_remove=False,
+            detach=True,
+        )
+
+        try:
+            result = container.wait(timeout=timeout)
+            exit_code = result["StatusCode"]
+        except Exception:
+            try:
+                container.kill()
+            except Exception:
+                pass
+            runtime_ms = int((time.monotonic() - start) * 1000)
+            partial = container.logs(stdout=True, stderr=False).decode("utf-8", errors="replace").strip()
+            return (
+                f"=== Container Execution Result ===\n"
+                f"Exit code: killed (timeout)\n"
+                f"Runtime: {runtime_ms}ms\n\n"
+                f"--- stdout ---\n{partial or '(empty)'}\n\n"
+                f"--- stderr ---\n"
+                f"Container killed after {timeout}s timeout"
+            )
+
+        runtime_ms = int((time.monotonic() - start) * 1000)
+        stdout = container.logs(stdout=True, stderr=False).decode("utf-8", errors="replace").strip()
+        stderr = container.logs(stdout=False, stderr=True).decode("utf-8", errors="replace").strip()
+
+        return (
+            f"=== Container Execution Result ===\n"
+            f"Exit code: {exit_code}\n"
+            f"Runtime: {runtime_ms}ms\n\n"
+            f"--- stdout ---\n{stdout or '(empty)'}\n\n"
+            f"--- stderr ---\n{stderr or '(empty)'}"
+        )
+
+    except docker.errors.ImageNotFound:
+        return f"=== Container Execution Result ===\nError: Image '{image}' not found."
+    except docker.errors.DockerException as e:
+        err = str(e)
+        if any(k in err for k in ("ConnectionRefused", "FileNotFoundError", "Error while fetching server")):
+            return (
+                "=== Container Execution Result ===\n"
+                "Error: Docker daemon is not accessible. Is Docker running?"
+            )
+        return f"=== Container Execution Result ===\nError: {err}"
+    finally:
+        if container is not None:
+            try:
+                container.remove(force=True)
+            except Exception:
+                pass
+        if tmp_path is not None:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
 
 def _run_python(code: str, packages: list[str] | None = None, timeout_seconds: int = 60) -> str:
     raise NotImplementedError
