@@ -16,7 +16,10 @@
       "command": "python",
       "args": [
         "tools/docker_server.py"
-      ]
+      ],
+      "env": {
+        "DOCKER_HOST": "unix:///Users/jeremy/.docker/run/docker.sock"
+      }
     }
   }
 }
