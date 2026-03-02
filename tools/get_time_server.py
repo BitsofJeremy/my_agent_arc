@@ -7,7 +7,7 @@
 # ]
 # ///
 # ARC-generated skill server: get_time
-# Get current time in Jeremy's Mountain timezone with proper formatting and DST handling
+# Get current time in Mountain timezone (America/Denver) with proper formatting and DST handling
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -26,7 +26,7 @@ async def list_tools():
     return [
         {
             "name": "get_local_time",
-            "description": "Get current time in Jeremy's Mountain timezone (Boulder/Denver area) with formatted output"
+            "description": "Get current time in Mountain timezone (America/Denver) with formatted output"
         },
         {
             "name": "get_time_details", 
@@ -36,7 +36,7 @@ async def list_tools():
 
 @server.call_tool()
 async def get_local_time():
-    """Get current time in Jeremy's Mountain timezone with formatted output"""
+    """Get current time in Mountain timezone (America/Denver) with formatted output"""
     utc_now = datetime.now(pytz.UTC)
     mountain_tz = pytz.timezone('America/Denver')
     mountain_now = utc_now.astimezone(mountain_tz)

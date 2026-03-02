@@ -72,7 +72,7 @@ def test_template_extra_dependencies_included():
 **Step 2: Run tests to confirm they fail**
 
 ```bash
-cd /Users/jeremy/Documents/current_projects/my_agent_arc
+cd /opt/arc
 python -m pytest tests/test_tools_write_skill.py -v
 ```
 
@@ -354,7 +354,7 @@ Replace the file contents with:
         "tools/docker_server.py"
       ],
       "env": {
-        "DOCKER_HOST": "unix:///Users/jeremy/.docker/run/docker.sock"
+        "DOCKER_HOST": "unix:///var/run/docker.sock"
       }
     },
     "get_time": {

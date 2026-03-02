@@ -21,7 +21,7 @@
         "tools/docker_server.py"
       ],
       "env": {
-        "DOCKER_HOST": "unix:///Users/jeremy/.docker/run/docker.sock"
+        "DOCKER_HOST": "unix:///var/run/docker.sock"
       }
     },
     "get_time": {

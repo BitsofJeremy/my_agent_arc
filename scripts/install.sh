@@ -25,7 +25,7 @@ ARC_REPO="https://github.com/BitsofJeremy/my_agent_arc.git"
 INSTALL_DIR="/opt/arc"
 ARC_USER="arc"
 ARC_GROUP="arc"
-OLLAMA_MODEL="minimax-m2.5"
+OLLAMA_MODEL="minimax-m2.5:cloud"
 EMBED_MODEL="nomic-embed-text"
 
 # ── Colours ────────────────────────────────────────────────────

@@ -81,7 +81,7 @@ git clone https://github.com/BitsofJeremy/my_agent_arc.git
 cd my_agent_arc
 
 # 2. Pull models
-ollama pull minimax-m2.5
+ollama pull minimax-m2.5:cloud
 ollama pull nomic-embed-text
 
 # 2.5. Install Docker (required for sandboxed code execution)
@@ -152,7 +152,7 @@ my_agent_arc/
 
 | Component | Technology |
 | --- | --- |
-| LLM Inference | [Ollama](https://ollama.com/) — recommended model: [minimax-m2.5](https://ollama.com/library/minimax-m2.5) |
+| LLM Inference | [Ollama](https://ollama.com/) — recommended model: [minimax-m2.5:cloud](https://ollama.com/library/minimax-m2.5:cloud) |
 | Chat Interface | [python-telegram-bot](https://python-telegram-bot.org/) |
 | Relational Storage | SQLite via [aiosqlite](https://github.com/omnilib/aiosqlite) (WAL mode) |
 | Vector Memory | [ChromaDB](https://www.trychroma.com/) (persistent, local) |

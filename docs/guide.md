@@ -103,11 +103,11 @@ cd my_agent_arc
 ### Step 2: Pull the LLM models
 
 ```bash
-ollama pull minimax-m2.5          # recommended chat model
+ollama pull minimax-m2.5:cloud          # recommended chat model
 ollama pull nomic-embed-text      # embedding model for memory
 ```
 
-The recommended chat model is [minimax-m2.5](https://ollama.com/library/minimax-m2.5) for its strong tool-calling support and reasoning quality. Any Ollama model with function-calling support will work — set `ARC_OLLAMA_MODEL` in `.env` to use a different one.
+The recommended chat model is [minimax-m2.5:cloud](https://ollama.com/library/minimax-m2.5:cloud) for its strong tool-calling support and reasoning quality. Any Ollama model with function-calling support will work — set `ARC_OLLAMA_MODEL` in `.env` to use a different one.
 
 ### Step 3: Install uv and project dependencies
 
@@ -149,7 +149,7 @@ cp .env.example .env
 Edit `.env` and set at minimum:
 
 ```bash
-ARC_OLLAMA_MODEL=minimax-m2.5       # or your preferred model
+ARC_OLLAMA_MODEL=minimax-m2.5:cloud       # or your preferred model
 ARC_TELEGRAM_BOT_TOKEN=your-token   # optional — admin chat works without it
 ```
 
@@ -179,7 +179,7 @@ All settings use the `ARC_` prefix and are loaded from `.env` or environment var
 | --- | --- | --- |
 | `ARC_TELEGRAM_BOT_TOKEN` | *(empty — bot disabled)* | Telegram Bot API token from [@BotFather](https://t.me/BotFather). Leave empty to run without Telegram. |
 | `ARC_OLLAMA_HOST` | `http://localhost:11434` | Ollama server URL. Change this if Ollama runs on a different host or port. |
-| `ARC_OLLAMA_MODEL` | `minimax-m2.5` | Chat model for the agentic loop. Must support function/tool calling. Recommended: [minimax-m2.5](https://ollama.com/library/minimax-m2.5). |
+| `ARC_OLLAMA_MODEL` | `minimax-m2.5:cloud` | Chat model for the agentic loop. Must support function/tool calling. Recommended: [minimax-m2.5:cloud](https://ollama.com/library/minimax-m2.5:cloud). |
 | `ARC_OLLAMA_EMBED_MODEL` | `nomic-embed-text` | Embedding model for ChromaDB vector memory. Used by the `search_memory` and `save_to_memory` tools. |
 | `ARC_SQLITE_DB_PATH` | `data/arc.db` | SQLite database file path (relative to project root or absolute). |
 | `ARC_CHROMADB_PATH` | `data/chromadb` | ChromaDB persistent storage directory (relative to project root or absolute). |
@@ -204,7 +204,7 @@ ARC_TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrSTUvwxYZ
 
 # Ollama
 ARC_OLLAMA_HOST=http://localhost:11434
-ARC_OLLAMA_MODEL=minimax-m2.5
+ARC_OLLAMA_MODEL=minimax-m2.5:cloud
 ARC_OLLAMA_EMBED_MODEL=nomic-embed-text
 
 # Context
@@ -508,7 +508,7 @@ Write instructions for the agent's next heartbeat cycle. This is how ARC program
 
 **How it works:** The tool reads `data/heartbeat.md`, finds the `## Current Instructions` section, and replaces everything in that section with the new instructions. If the section doesn't exist, it's appended.
 
-**Example usage:** The agent might write: *"Check in with Jeremy about the deployment status. Review the project backlog for any overdue items."* On the next heartbeat (every 15 minutes by default), ARC reads these instructions and acts on them.
+**Example usage:** The agent might write: *"Check in on the deployment status. Review the project backlog for any overdue items."* On the next heartbeat (every 15 minutes by default), ARC reads these instructions and acts on them.
 
 ---
 
@@ -860,7 +860,7 @@ Add the `docker` server entry to `data/mcp_servers.json`:
       "command": "uv",
       "args": ["run", "tools/docker_server.py"],
       "env": {
-        "DOCKER_HOST": "unix:///Users/jeremy/.docker/run/docker.sock"
+        "DOCKER_HOST": "unix:///Users/YOUR_USERNAME/.docker/run/docker.sock"
       }
     }
   }
@@ -1054,9 +1054,9 @@ Tell ARC about yourself. ARC reads this on every trigger so it knows who it's wo
 ```markdown
 # User Profile
 
-- **Name:** Jeremy
-- **What to call me:** Jeremy
-- **Timezone:** US/Pacific
+- **Name:** Alex
+- **What to call me:** Alex
+- **Timezone:** US/Eastern
 - **Projects:** my_agent_arc, a web scraping tool, home automation
 - **Preferences:** Concise answers. Python. Tea over coffee.
 ```
@@ -1134,7 +1134,7 @@ The script is idempotent (safe to re-run) and performs these steps:
 1. Installs system dependencies (`python3`, `python3-venv`, `python3-pip`, `git`, `curl`)
 2. Checks Python version — if below 3.11, installs from the deadsnakes PPA
 3. Installs Ollama (via the official install script) and starts the service
-4. Pulls the recommended models (`minimax-m2.5` and `nomic-embed-text`)
+4. Pulls the recommended models (`minimax-m2.5:cloud` and `nomic-embed-text`)
 5. Creates a dedicated `arc` system user with no login shell
 6. Clones the repository to `/opt/arc` (or pulls latest if it already exists)
 7. Creates a Python virtual environment at `/opt/arc/.venv` and installs dependencies
@@ -1257,7 +1257,7 @@ sudo systemctl start ollama
 ollama list
 
 # Pull the required models
-ollama pull minimax-m2.5
+ollama pull minimax-m2.5:cloud
 ollama pull nomic-embed-text
 ```
 

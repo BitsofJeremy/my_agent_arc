@@ -25,7 +25,7 @@ mcp[cli]>=1.0.0
 
 **Step 2: Install it**
 
-Run: `cd /Users/jeremy/Documents/current_projects/my_agent_arc && pip install 'mcp[cli]>=1.0.0'`
+Run: `cd /opt/arc && pip install 'mcp[cli]>=1.0.0'`
 Expected: Successfully installed mcp and dependencies
 
 **Step 3: Commit**
@@ -344,7 +344,7 @@ git commit -m "feat: show MCP server status on admin dashboard"
 
 **Step 1: Verify ARC starts cleanly with empty config**
 
-Run: `cd /Users/jeremy/Documents/current_projects/my_agent_arc && python -m arc.main`
+Run: `cd /opt/arc && python -m arc.main`
 Expected: Starts without errors, logs "MCP: 0 servers connected" or similar
 
 **Step 2: Kill the server**
