@@ -360,10 +360,16 @@ async def build_context(
         messages.append({"role": "system", "content": system_message})
 
     # --- Append recent history ----------------------------------------------
+    # Filter out "tool" role messages from history — some cloud-hosted models
+    # (e.g. minimax via Ollama) return 500 when the conversation includes
+    # tool-role messages from prior iterations.
     history = await get_recent_history(session_id=session_id)
     for msg in history:
+        role = str(msg["role"])
+        if role == "tool":
+            continue
         messages.append({
-            "role": str(msg["role"]),
+            "role": role,
             "content": str(msg["content"]),
         })
 
