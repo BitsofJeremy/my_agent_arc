@@ -102,6 +102,7 @@ async def run_agent(
         The agent's final text response.
     """
     settings = get_settings()
+    client = ollama.Client(host=settings.ollama_host)
 
     # --- 1. Persist the incoming user message ------------------------------
     await log_message("user", user_input, session_id=session_id)
@@ -126,7 +127,7 @@ async def run_agent(
         # Call Ollama (synchronous) on a background thread.
         try:
             response = await asyncio.to_thread(
-                ollama.chat,
+                client.chat,
                 model=settings.ollama_model,
                 messages=messages,
                 tools=tool_schemas,

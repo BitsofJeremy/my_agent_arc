@@ -231,8 +231,9 @@ async def maybe_compact(session_id: str | None = None) -> bool:
         f"{row['role']}: {row['content']}" for row in older_messages
     )
 
+    client = ollama.Client(host=settings.ollama_host)
     try:
-        response = ollama.chat(
+        response = client.chat(
             model=settings.ollama_model,
             messages=[
                 {

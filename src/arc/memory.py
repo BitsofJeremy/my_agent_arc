@@ -38,8 +38,9 @@ def _embed(text: str) -> list[float] | None:
     callers can degrade gracefully.
     """
     settings = get_settings()
+    client = ollama.Client(host=settings.ollama_host)
     try:
-        response = ollama.embeddings(
+        response = client.embeddings(
             model=settings.ollama_embed_model,
             prompt=text,
         )
