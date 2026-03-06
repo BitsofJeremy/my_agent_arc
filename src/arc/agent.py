@@ -130,6 +130,7 @@ async def run_agent(
                 model=settings.ollama_model,
                 messages=messages,
                 tools=tool_schemas,
+                think=settings.ollama_think,
             )
         except ollama.ResponseError as exc:
             logger.error("Ollama ResponseError: %s", exc)

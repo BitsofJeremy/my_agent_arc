@@ -1,11 +1,48 @@
 {% extends "base.html" %}
 
-{% block title %}Live Logs — ARC Admin{% endblock %}
+{% block title %}Logs — ARC Admin{% endblock %}
 
 {% block content %}
-<h1>Live Logs</h1>
+<h1>Logs</h1>
 
-<div id="log-container"></div>
+{# ----- Message History ----- #}
+<div class="card">
+  <h2>Message History (last 100)</h2>
+  {% if messages %}
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Role</th>
+        <th>Content</th>
+        <th>Tool</th>
+        <th>Session</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for msg in messages %}
+      <tr>
+        <td style="font-family: var(--font-mono); font-size: 0.8rem;">{{ msg.id }}</td>
+        <td class="role">{{ msg.role }}</td>
+        <td class="content" title="{{ msg.content }}">{{ msg.content[:200] }}</td>
+        <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);">{{ msg.tool_name or "" }}</td>
+        <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);">{{ msg.session_id or "" }}</td>
+        <td class="timestamp">{{ msg.created_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color: var(--muted);">No messages yet.</p>
+  {% endif %}
+</div>
+
+{# ----- Live Log Stream ----- #}
+<div class="card">
+  <h2>Live Application Log</h2>
+  <div id="log-container"></div>
+</div>
 
 <script>
 (function () {

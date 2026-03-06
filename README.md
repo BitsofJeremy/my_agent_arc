@@ -99,7 +99,7 @@ pip install -r requirements.txt
 cp .env.example .env          # edit .env to set your preferences
 
 # 5. Run
-python -m arc.main            # admin dashboard at http://localhost:8080
+uv run run.py                 # admin dashboard at http://localhost:8080
 ```
 
 Open **http://localhost:8080/chat** to start talking to ARC. Telegram is optional — set `ARC_TELEGRAM_BOT_TOKEN` in `.env` if you want it.
@@ -112,6 +112,7 @@ Open **http://localhost:8080/chat** to start talking to ARC. Telegram is optiona
 
 ```
 my_agent_arc/
+├── run.py                  # Entry point (uv run run.py)
 ├── src/arc/
 │   ├── config.py            # Settings from env vars (.env)
 │   ├── database.py          # SQLite schema + ChromaDB init

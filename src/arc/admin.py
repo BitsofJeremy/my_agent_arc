@@ -184,8 +184,18 @@ def _register_routes(app: FastAPI) -> None:  # noqa: C901 — route registration
 
     @app.get("/logs", response_class=HTMLResponse)
     async def logs_page(request: Request) -> HTMLResponse:
-        """Render the live-log viewer."""
-        return _render("logs.html")
+        """Render the log viewer with message history and live stream."""
+        async with get_db() as db:
+            cursor = await db.execute(
+                """
+                SELECT id, role, content, tool_name, session_id, created_at
+                FROM   messages
+                ORDER BY created_at DESC
+                LIMIT  100
+                """
+            )
+            messages = [dict(r) for r in await cursor.fetchall()]
+        return _render("logs.html", messages=messages)
 
     # -- SSE log stream -----------------------------------------------------
 

@@ -57,6 +57,7 @@ class Settings:
     soul_path: str = "data/soul.md"
     heartbeat_path: str = "data/heartbeat.md"
     max_agent_iterations: int = 10
+    ollama_think: bool = False
 
 
 def load_settings() -> Settings:
@@ -68,7 +69,7 @@ def load_settings() -> Settings:
     relative to the project root.
     """
     hints = get_type_hints(Settings)
-    kwargs: dict[str, str | int | float] = {}
+    kwargs: dict[str, str | int | float | bool] = {}
 
     for f in fields(Settings):
         env_key = f"{_ENV_PREFIX}{f.name.upper()}"
@@ -79,7 +80,10 @@ def load_settings() -> Settings:
 
         target_type = hints[f.name]
         try:
-            value: str | int | float = target_type(raw)
+            if target_type is bool:
+                value: str | int | float | bool = raw.lower() in ("1", "true", "yes", "on")
+            else:
+                value = target_type(raw)
         except (ValueError, TypeError) as exc:
             msg = (
                 f"Cannot convert env var {env_key}={raw!r} "
